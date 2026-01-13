@@ -4,6 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/joho/godotenv"
+	"gochat/internal/config"
+	"os"
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
@@ -11,61 +14,55 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-type Config struct {
-	Host     string `env:"DB_HOST,required"`
-	Port     int    `env:"DB_PORT" envDefault:"5432"`
-	User     string `env:"DB_USER,required"`
-	Password string `env:"DB_PASSWORD,required"`
-	DBName   string `env:"DB_DBNAME,required"`
-	SSLMode  string `env:"DB_SSLMODE" envDefault:"disable"`
-	TimeZone string `env:"DB_TIMEZONE" envDefault:"Asia/Taipei"`
-
-	MaxOpenConn     int           `env:"DB_MAX_OPEN" envDefault:"50"`
-	MaxIdleConn     int           `env:"DB_MAX_IDLE" envDefault:"20"`
-	ConnMaxLifetime time.Duration `env:"DB_CONN_MAX_LIFETIME" envDefault:"30m"`
-	ConnMaxIdleTime time.Duration `env:"DB_CONN_MAX_IDLE" envDefault:"5m"`
-}
-
 type DB struct {
 	SQL     *sql.DB
 	Builder sq.StatementBuilderType
 }
 
-func New(cfg Config) (*DB, error) {
-	if cfg.SSLMode == "" {
-		cfg.SSLMode = "disable"
+// Init DB
+func Init(cfg *config.EnvConfig) (*DB, error) {
+
+	// 本地開發環境檢查並載入env參數
+	envPath := "../.env"
+	_, envFileErr := os.Stat(envPath)
+	if !os.IsNotExist(envFileErr) {
+		_ = godotenv.Load()
 	}
-	if cfg.TimeZone == "" {
-		cfg.TimeZone = "Asia/Taipei"
+
+	if cfg.DBSSLMode == "" {
+		cfg.DBSSLMode = "disable"
+	}
+	if cfg.DBTimeZone == "" {
+		cfg.DBTimeZone = "Asia/Taipei"
 	}
 
 	dsn := fmt.Sprintf(
 		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s timezone=%s",
-		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.DBName, cfg.SSLMode, cfg.TimeZone,
+		cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPassword, cfg.DBName, cfg.DBSSLMode, cfg.DBTimeZone,
 	)
 
-	sqlDB, err := sql.Open("pgx", dsn)
-	if err != nil {
-		return nil, fmt.Errorf("sql.Open: %w", err)
+	sqlDB, dbErr := sql.Open("pgx", dsn)
+	if dbErr != nil {
+		return nil, fmt.Errorf("sql.Open: %w", dbErr)
 	}
 
-	if cfg.MaxOpenConn > 0 {
-		sqlDB.SetMaxOpenConns(cfg.MaxOpenConn)
+	if cfg.DBMaxConn > 0 {
+		sqlDB.SetMaxOpenConns(cfg.DBMaxConn)
 	} else {
 		sqlDB.SetMaxOpenConns(20)
 	}
-	if cfg.MaxIdleConn > 0 {
-		sqlDB.SetMaxIdleConns(cfg.MaxIdleConn)
+	if cfg.DBMaxIdleConn > 0 {
+		sqlDB.SetMaxIdleConns(cfg.DBMaxIdleConn)
 	} else {
 		sqlDB.SetMaxIdleConns(10)
 	}
-	if cfg.ConnMaxLifetime > 0 {
-		sqlDB.SetConnMaxLifetime(cfg.ConnMaxLifetime)
+	if cfg.DBConnMaxLifeTime > 0 {
+		sqlDB.SetConnMaxLifetime(cfg.DBConnMaxLifeTime)
 	} else {
 		sqlDB.SetConnMaxLifetime(30 * time.Minute)
 	}
-	if cfg.ConnMaxIdleTime > 0 {
-		sqlDB.SetConnMaxIdleTime(cfg.ConnMaxIdleTime)
+	if cfg.DBConnMaxIdleTime > 0 {
+		sqlDB.SetConnMaxIdleTime(cfg.DBConnMaxIdleTime)
 	} else {
 		sqlDB.SetConnMaxIdleTime(5 * time.Minute)
 	}

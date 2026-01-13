@@ -1,4 +1,4 @@
-package chatd
+package main
 
 import (
 	"context"
@@ -7,7 +7,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/joho/godotenv"
+	"gochat/internal/config"
 	"gochat/internal/db"
+	"gochat/internal/redis"
+	"gochat/internal/route"
 	"log"
 	"net/http"
 	"os"
@@ -24,48 +27,49 @@ var upgrader = websocket.Upgrader{
 
 func main() {
 
-	//DB init
-	_ = godotenv.Load()
-	var cfg db.Config
-	if err := env.Parse(&cfg); err != nil {
-		log.Fatalf("parse env failed: %v", err)
+	// 本地開發環境檢查並載入env參數到os
+	envPath := "../.env"
+	_, envFileErr := os.Stat(envPath)
+	if !os.IsNotExist(envFileErr) {
+		_ = godotenv.Load()
 	}
 
-	d, err := db.New(db.Config{
-		Host:            cfg.Host,
-		Port:            cfg.Port,
-		User:            cfg.User,
-		Password:        cfg.Password,
-		DBName:          cfg.DBName,
-		SSLMode:         cfg.SSLMode,
-		TimeZone:        cfg.TimeZone,
-		MaxOpenConn:     cfg.MaxOpenConn,
-		MaxIdleConn:     cfg.MaxIdleConn,
-		ConnMaxLifetime: cfg.ConnMaxLifetime,
-		ConnMaxIdleTime: cfg.ConnMaxIdleTime,
-	})
-	if err != nil {
-		log.Fatalf("db init failed: %v", err)
+	//載入env
+	var cfg config.EnvConfig
+	if cfgErr := env.Parse(&cfg); cfgErr != nil {
+		log.Fatalf("parse env failed: %v", cfgErr)
+	}
+
+	d, dbErr := db.Init(&cfg)
+	if dbErr != nil {
+		log.Fatalf("db init failed: %v", dbErr)
 	}
 
 	defer d.Close()
 
-	// DB health check with timeout (fail fast)
 	pingCtx, pingCancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer pingCancel()
 
 	if err := d.Ping(pingCtx); err != nil {
 		log.Fatalf("db health check failed: %v", err)
 	}
-	log.Println("[DB] connected and healthy.")
+	log.Println("[DB] check success")
+
+	redis, redisErr := redis.Init(&cfg)
+	if redisErr != nil {
+		log.Fatalf("redis init failed: %v", redisErr)
+	}
+
+	pingCtx, pingCancel := context.WithTimeout(context.Background(), 3*time.Second)
+	redis.Ping(pingCtx)
+	defer pingCancel()
 
 	//on Http server
 	r := gin.New()
-	r.GET("/ping", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "pong",
-		})
-	})
+
+	if err := route.RegisterRoutes(r); err != nil {
+		log.Fatalf("register route failed: %v", err)
+	}
 
 	r.Use(gin.Logger(), gin.Recovery())
 
@@ -119,7 +123,6 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
-	// 簡單 echo + ping/pong 範例
 	conn.SetPongHandler(func(string) error {
 		_ = conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 		return nil
@@ -132,7 +135,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("[WS] read error: %v", err)
 			return
 		}
-		// echo 回去
+
 		if err := conn.WriteMessage(mt, msg); err != nil {
 			log.Printf("[WS] write error: %v", err)
 			return
