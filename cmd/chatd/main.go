@@ -40,29 +40,32 @@ func main() {
 		log.Fatalf("parse env failed: %v", cfgErr)
 	}
 
-	d, dbErr := db.Init(&cfg)
+	dbConn, dbErr := db.Init(&cfg)
 	if dbErr != nil {
 		log.Fatalf("db init failed: %v", dbErr)
 	}
 
-	defer d.Close()
+	defer dbConn.Close()
 
 	pingCtx, pingCancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer pingCancel()
 
-	if err := d.Ping(pingCtx); err != nil {
+	if err := dbConn.Ping(pingCtx); err != nil {
 		log.Fatalf("db health check failed: %v", err)
 	}
 	log.Println("[DB] check success")
 
-	redis, redisErr := redis.Init(&cfg)
+	redisConn, redisErr := redis.Init(&cfg)
 	if redisErr != nil {
-		log.Fatalf("redis init failed: %v", redisErr)
+		log.Fatalf("redisConn init failed: %v", redisErr)
 	}
 
-	pingCtx, pingCancel := context.WithTimeout(context.Background(), 3*time.Second)
-	redis.Ping(pingCtx)
-	defer pingCancel()
+	defer redisConn.Close()
+
+	redisPingCtx, redisPingCancel := context.WithTimeout(context.Background(), 3*time.Second)
+	redisConn.Ping(redisPingCtx)
+
+	defer redisPingCancel()
 
 	//on Http server
 	r := gin.New()
