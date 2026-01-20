@@ -70,9 +70,7 @@ func main() {
 	//on Http server
 	r := gin.New()
 
-	if err := route.RegisterRoutes(r); err != nil {
-		log.Fatalf("register route failed: %v", err)
-	}
+	route.RegisterRoutes(r)
 
 	r.Use(gin.Logger(), gin.Recovery())
 
