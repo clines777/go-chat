@@ -3,14 +3,12 @@ package main
 import (
 	"context"
 	"errors"
-	"github.com/caarlos0/env/v11"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"github.com/joho/godotenv"
-	"gochat/internal/config"
-	"gochat/internal/db"
-	"gochat/internal/redis"
-	"gochat/internal/route"
+	"gochat/internal/handler/api"
+	"gochat/internal/infra/db"
+	"gochat/internal/infra/redis"
+	"gochat/internal/ws"
 	"log"
 	"net/http"
 	"os"
@@ -27,50 +25,31 @@ var upgrader = websocket.Upgrader{
 
 func main() {
 
-	// 本地開發環境檢查並載入env參數到os
-	envPath := "../.env"
-	_, envFileErr := os.Stat(envPath)
-	if !os.IsNotExist(envFileErr) {
-		_ = godotenv.Load()
-	}
-
-	//載入env
-	var cfg config.EnvConfig
-	if cfgErr := env.Parse(&cfg); cfgErr != nil {
-		log.Fatalf("parse env failed: %v", cfgErr)
-	}
-
-	dbConn, dbErr := db.Init(&cfg)
+	//BEGIN 初始化DB連線池
+	dbConn, dbErr := db.GetDBConn()
 	if dbErr != nil {
 		log.Fatalf("db init failed: %v", dbErr)
 	}
 
-	defer dbConn.Close()
-
-	pingCtx, pingCancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer pingCancel()
-
-	if err := dbConn.Ping(pingCtx); err != nil {
+	if err := dbConn.Ping(); err != nil {
 		log.Fatalf("db health check failed: %v", err)
 	}
 	log.Println("[DB] check success")
+	//END 初始化DB連線池
 
-	redisConn, redisErr := redis.Init(&cfg)
-	if redisErr != nil {
-		log.Fatalf("redisConn init failed: %v", redisErr)
+	//BEGIN 初始化Redis連線池
+	redisConn := redis.GetRedis()
+
+	redisPingErr := redisConn.Ping()
+	if redisPingErr != nil {
+		log.Fatalf("redisConn health check failed: %v", redisPingErr)
 	}
+	//END 初始化Redis連線池
 
-	defer redisConn.Close()
-
-	redisPingCtx, redisPingCancel := context.WithTimeout(context.Background(), 3*time.Second)
-	redisConn.Ping(redisPingCtx)
-
-	defer redisPingCancel()
-
-	//on Http server
+	//BEGIN 初始化Http server
 	r := gin.New()
 
-	route.RegisterRoutes(r)
+	api.RegisterRoutes(r)
 
 	r.Use(gin.Logger(), gin.Recovery())
 
@@ -85,8 +64,9 @@ func main() {
 			log.Fatalf("[HTTP] listen error: %v", err)
 		}
 	}()
+	//END 初始化Http server
 
-	//on Websocket server
+	//BEGIN 初始化WS server
 	wsMux := http.NewServeMux()
 	wsMux.HandleFunc("/ws", wsHandler)
 
@@ -101,8 +81,9 @@ func main() {
 			log.Fatalf("[WS] listen error: %v", err)
 		}
 	}()
+	//END 初始化WS server
 
-	//server close action
+	//BEGIN 註冊server down事件
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
@@ -114,6 +95,7 @@ func main() {
 	_ = httpSrv.Shutdown(ctx)
 	_ = wsSrv.Shutdown(ctx)
 	log.Println("server closed")
+	//END 註冊server down行為
 }
 
 func wsHandler(w http.ResponseWriter, r *http.Request) {
@@ -131,13 +113,22 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	_ = conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 
 	for {
-		mt, msg, err := conn.ReadMessage()
+		mt, input, err := conn.ReadMessage()
 		if err != nil {
 			log.Printf("[WS] read error: %v", err)
 			return
 		}
 
-		if err := conn.WriteMessage(mt, msg); err != nil {
+		if mt != websocket.TextMessage {
+			conn.Close()
+			return
+		}
+
+		dispatcher := ws.NewDispatcher()
+
+		output, err := dispatcher.Dispatch(input)
+
+		if err := conn.WriteMessage(mt, output); err != nil {
 			log.Printf("[WS] write error: %v", err)
 			return
 		}

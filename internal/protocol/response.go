@@ -1,14 +1,14 @@
-package lib
+package protocol
 
 import "github.com/gin-gonic/gin"
 
 // ApiResponse http 返回 response
 type ApiResponse struct {
 	Code    int         `json:"code"`
-	Message string      `json:"message"`
+	Message string      `json:"msg"`
 	Data    interface{} `json:"data"`
 }
 
 func (r *ApiResponse) Get() map[string]any {
-	return gin.H{"code": r.Code, "message": r.Message, "data": r.Data}
+	return gin.H{"code": r.Code, "msg": r.Message, "data": r.Data}
 }

@@ -1,4 +1,4 @@
-package code
+package protocol
 
 var (
 	ErrorNone     = 0

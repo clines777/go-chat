@@ -1,6 +1,43 @@
-package config
+package infra
 
-import "time"
+import (
+	"github.com/caarlos0/env/v11"
+	"github.com/joho/godotenv"
+	"log"
+	"os"
+	"time"
+)
+
+var cfg *EnvConfig
+
+func GetEnvConfig() *EnvConfig {
+
+	if cfg != nil {
+		return cfg
+	}
+
+	// 本地開發環境檢查並載入env參數到os
+	envPath := "../.env"
+	_, envFileErr := os.Stat(envPath)
+	if !os.IsNotExist(envFileErr) {
+		_ = godotenv.Load()
+	}
+
+	//載入env配置
+	var cfg EnvConfig
+	if cfgErr := env.Parse(&cfg); cfgErr != nil {
+		log.Fatalf("parse env failed: %v", cfgErr)
+	}
+
+	//動態定義hostname, 作為簡易的server辨識ID
+	hostname, hostNameErr := os.Hostname()
+	if hostNameErr != nil || hostname == "" {
+		log.Fatalf("parse env failed: %v", hostNameErr)
+	}
+	cfg.ServerName = hostname
+
+	return &cfg
+}
 
 type EnvConfig struct {
 	DBPort        int    `env:"DB_PORT" envDefault:"5432"`
@@ -19,4 +56,6 @@ type EnvConfig struct {
 	DBConnMaxLifeTime time.Duration `env:"DB_CONN_MAX_LIFETIME" envDefault:"30m"`
 	DBConnMaxIdleTime time.Duration `env:"DB_CONN_MAX_IDLE" envDefault:"5m"`
 	RedisDialTimeout  time.Duration `env:"REDIS_DIAL_TIMEOUT" envDefault:"5s"`
+
+	ServerName string `envDefault:""`
 }

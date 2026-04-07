@@ -1,4 +1,4 @@
-package lib
+package protocol
 
 type GetLoginTokenReq struct {
 	MemberId     int32  `json:"member_id"`
