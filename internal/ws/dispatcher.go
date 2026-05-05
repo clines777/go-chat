@@ -46,8 +46,7 @@ func (d *Dispatcher) Dispatch(client *Client, in []byte) ([]byte, error) {
 
 	var p protocol.Payload
 	if len(in) == 0 || json.Unmarshal(in, &p) != nil || p.MsgType == "" {
-		_ = writeJSON(client.Conn, protocol.Payload{MsgType: protocol.Error, Remark: "invalid payload"})
-		_ = client.Conn.Close()
+		writeError(client, "invalid payload")
 		return nil, errors.New("invalid payload")
 	}
 
@@ -56,8 +55,7 @@ func (d *Dispatcher) Dispatch(client *Client, in []byte) ([]byte, error) {
 	d.mu.RUnlock()
 
 	if !ok {
-		_ = writeJSON(client.Conn, protocol.Payload{MsgType: protocol.Error, Remark: "unknown msg type"})
-		_ = client.Conn.Close()
+		writeError(client, "unknown msg type")
 		return nil, errors.New("unknown msg type")
 	}
 
@@ -65,8 +63,7 @@ func (d *Dispatcher) Dispatch(client *Client, in []byte) ([]byte, error) {
 
 	if !h.SessionFree {
 		if GetSocketSession(ctx.ConnID) == nil {
-			_ = writeJSON(client.Conn, protocol.Payload{MsgType: protocol.Error, Remark: "session lost"})
-			_ = client.Conn.Close()
+			writeError(client, "session lost")
 			return nil, errors.New("session lost")
 		}
 	}
@@ -74,12 +71,12 @@ func (d *Dispatcher) Dispatch(client *Client, in []byte) ([]byte, error) {
 	return h.Handler(ctx)
 }
 
-func writeJSON(conn *websocket.Conn, v any) error {
-	b, err := json.Marshal(v)
+func writeError(client *Client, remark string) {
+	b, err := json.Marshal(protocol.Payload{MsgType: protocol.Error, Remark: remark})
 	if err != nil {
-		return err
+		return
 	}
-	return conn.WriteMessage(websocket.TextMessage, b)
+	client.TrySend(b)
 }
 
 func bytesTrimSpace(b []byte) []byte {

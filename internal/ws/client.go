@@ -4,12 +4,17 @@ import (
 	"crypto/rand"
 	"fmt"
 	"github.com/gorilla/websocket"
+	"log"
 	"sync"
+	"time"
 )
+
+const sendBufSize = 64
 
 type Client struct {
 	ConnID string
 	Conn   *websocket.Conn
+	Send   chan []byte
 }
 
 func NewClient(conn *websocket.Conn) *Client {
@@ -18,37 +23,56 @@ func NewClient(conn *websocket.Conn) *Client {
 	return &Client{
 		ConnID: fmt.Sprintf("%x", b),
 		Conn:   conn,
+		Send:   make(chan []byte, sendBufSize),
 	}
 }
 
-type Hub struct {
+func (c *Client) WritePump() {
+	defer c.Conn.Close()
+	for msg := range c.Send {
+		_ = c.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+		if err := c.Conn.WriteMessage(websocket.TextMessage, msg); err != nil {
+			log.Printf("[WS] write error: %v", err)
+			return
+		}
+	}
+}
+
+func (c *Client) TrySend(msg []byte) {
+	select {
+	case c.Send <- msg:
+	default:
+	}
+}
+
+var hub = struct {
 	clients map[string]*Client
 	mu      sync.RWMutex
+}{clients: make(map[string]*Client)}
+
+func Register(c *Client) {
+	hub.mu.Lock()
+	hub.clients[c.ConnID] = c
+	hub.mu.Unlock()
 }
 
-var defaultHub = &Hub{
-	clients: make(map[string]*Client),
+func Unregister(connID string) {
+	hub.mu.Lock()
+	delete(hub.clients, connID)
+	hub.mu.Unlock()
 }
 
-func (h *Hub) register(c *Client) {
-	h.mu.Lock()
-	h.clients[c.ConnID] = c
-	h.mu.Unlock()
-}
-
-func (h *Hub) unregister(connID string) {
-	h.mu.Lock()
-	delete(h.clients, connID)
-	h.mu.Unlock()
-}
-
-func (h *Hub) get(connID string) (*Client, bool) {
-	h.mu.RLock()
-	c, ok := h.clients[connID]
-	h.mu.RUnlock()
+func GetClient(connID string) (*Client, bool) {
+	hub.mu.RLock()
+	c, ok := hub.clients[connID]
+	hub.mu.RUnlock()
 	return c, ok
 }
 
-func Register(c *Client)                       { defaultHub.register(c) }
-func Unregister(connID string)                 { defaultHub.unregister(connID) }
-func GetClient(connID string) (*Client, bool)  { return defaultHub.get(connID) }
+func Broadcast(msg []byte) {
+	hub.mu.RLock()
+	defer hub.mu.RUnlock()
+	for _, c := range hub.clients {
+		c.TrySend(msg)
+	}
+}

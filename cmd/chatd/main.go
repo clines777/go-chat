@@ -90,9 +90,10 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 
 	client := ws.NewClient(conn)
 	ws.Register(client)
+	go client.WritePump()
 	defer func() {
 		ws.Unregister(client.ConnID)
-		conn.Close()
+		close(client.Send)
 	}()
 
 	conn.SetPongHandler(func(string) error {
@@ -117,10 +118,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if len(output) > 0 {
-			if err := conn.WriteMessage(websocket.TextMessage, output); err != nil {
-				log.Printf("[WS] write error: %v", err)
-				return
-			}
+			client.Send <- output
 		}
 	}
 }
