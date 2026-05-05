@@ -6,8 +6,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"gochat/internal/handler/api"
+	wshandler "gochat/internal/handler/ws"
 	"gochat/internal/infra/db"
 	"gochat/internal/infra/redis"
+	"gochat/internal/protocol"
 	"gochat/internal/ws"
 	"log"
 	"net/http"
@@ -23,67 +25,62 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
+var dispatcher = func() *ws.Dispatcher {
+	d := ws.NewDispatcher()
+	d.Register(protocol.Login, &ws.Route{SessionFree: true, Handler: wshandler.Login})
+	d.Register(protocol.Resume, &ws.Route{SessionFree: true, Handler: wshandler.Resume})
+	d.Register(protocol.Ping, &ws.Route{Handler: wshandler.Ping})
+	d.Register(protocol.EnterGroup, &ws.Route{Handler: wshandler.EnterGroup})
+	d.Register(protocol.EnterLobby, &ws.Route{Handler: wshandler.EnterLobby})
+	d.Register(protocol.EnterMyGroup, &ws.Route{Handler: wshandler.EnterMyGroup})
+	d.Register(protocol.SendChat, &ws.Route{Handler: wshandler.SendChat})
+	return d
+}()
+
 func main() {
 
-	//BEGIN 初始化DB連線池
 	dbConn, dbErr := db.GetDBConn()
 	if dbErr != nil {
 		log.Fatalf("db init failed: %v", dbErr)
 	}
-
 	if err := dbConn.Ping(); err != nil {
 		log.Fatalf("db health check failed: %v", err)
 	}
 	log.Println("[DB] check success")
-	//END 初始化DB連線池
 
-	//BEGIN 初始化Redis連線池
 	redisConn := redis.GetRedis()
-
-	redisPingErr := redisConn.Ping()
-	if redisPingErr != nil {
-		log.Fatalf("redisConn health check failed: %v", redisPingErr)
+	if err := redisConn.Ping(); err != nil {
+		log.Fatalf("redis health check failed: %v", err)
 	}
-	//END 初始化Redis連線池
 
-	//BEGIN 初始化Http server
 	r := gin.New()
-
-	api.RegisterRoutes(r)
-
 	r.Use(gin.Logger(), gin.Recovery())
+	api.RegisterRoutes(r)
 
 	httpSrv := &http.Server{
 		Addr:    ":9501",
 		Handler: r,
 	}
-
 	go func() {
 		log.Println("[HTTP] listening on :9501")
 		if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("[HTTP] listen error: %v", err)
 		}
 	}()
-	//END 初始化Http server
 
-	//BEGIN 初始化WS server
 	wsMux := http.NewServeMux()
 	wsMux.HandleFunc("/ws", wsHandler)
-
 	wsSrv := &http.Server{
 		Addr:    ":9502",
 		Handler: wsMux,
 	}
-
 	go func() {
 		log.Println("[WS] listening on :9502 (path: /ws)")
 		if err := wsSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("[WS] listen error: %v", err)
 		}
 	}()
-	//END 初始化WS server
 
-	//BEGIN 註冊server down事件
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
@@ -91,11 +88,9 @@ func main() {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-
 	_ = httpSrv.Shutdown(ctx)
 	_ = wsSrv.Shutdown(ctx)
 	log.Println("server closed")
-	//END 註冊server down行為
 }
 
 func wsHandler(w http.ResponseWriter, r *http.Request) {
@@ -104,7 +99,13 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("[WS] upgrade error: %v", err)
 		return
 	}
-	defer conn.Close()
+
+	client := ws.NewClient(conn)
+	ws.Register(client)
+	defer func() {
+		ws.Unregister(client.ConnID)
+		conn.Close()
+	}()
 
 	conn.SetPongHandler(func(string) error {
 		_ = conn.SetReadDeadline(time.Now().Add(60 * time.Second))
@@ -118,19 +119,20 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("[WS] read error: %v", err)
 			return
 		}
-
 		if mt != websocket.TextMessage {
-			conn.Close()
 			return
 		}
 
-		dispatcher := ws.NewDispatcher()
-
-		output, err := dispatcher.Dispatch(input)
-
-		if err := conn.WriteMessage(mt, output); err != nil {
-			log.Printf("[WS] write error: %v", err)
+		output, dispErr := dispatcher.Dispatch(client, input)
+		if dispErr != nil {
 			return
+		}
+
+		if len(output) > 0 {
+			if err := conn.WriteMessage(websocket.TextMessage, output); err != nil {
+				log.Printf("[WS] write error: %v", err)
+				return
+			}
 		}
 	}
 }

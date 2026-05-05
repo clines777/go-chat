@@ -6,93 +6,59 @@ import (
 )
 
 func RegisterRoutes(e *gin.Engine) {
+	e.GET("/ping", func(c *gin.Context) {
+		c.JSON(200, (&protocol.ApiResponse{Code: protocol.ErrorNone, Message: "OK"}).Get())
+	})
 
 	apiRoute := e.Group("/api")
+
+	authGroup := apiRoute.Group("/auth")
 	{
-		//ping
-		e.GET("/ping", func(c *gin.Context) {
-			resp := &protocol.ApiResponse{Code: protocol.ErrorNone, Message: "OK", Data: nil}
+		authGroup.POST("/get-login-token", GetLoginToken)
+	}
 
-			c.JSON(200, resp.Get())
-		})
+	userGroup := apiRoute.Group("/user")
+	{
+		userGroup.GET("/info", GetUserInfo)
+	}
 
-		//驗證
-		apiRoute.Group("/auth")
-		{
-			//取登入Token
-			apiRoute.POST("/get-login-token", GetLoginToken)
-		}
+	avatarGroup := apiRoute.Group("/avatar")
+	{
+		avatarGroup.GET("/list", GetAvatarList)
+		avatarGroup.POST("/set", SetAvatar)
+	}
 
-		//用戶
-		apiRoute.Group("/user")
-		{
-			//取用戶基本資訊.
-			apiRoute.GET("/info", GetUserInfo)
-		}
+	groupGroup := apiRoute.Group("/group")
+	{
+		groupGroup.GET("/lobby", GetLobbyGroup)
+		groupGroup.GET("/my", GetMyGroup)
+		groupGroup.GET("/info", GetGroupInfo)
+		groupGroup.POST("/join", JoinGroup)
+		groupGroup.POST("/quit", QuitGroup)
+		groupGroup.POST("/ban-user", BanUser)
+		groupGroup.POST("/unban-user", UnbanUser)
+		groupGroup.POST("/kick-user", KickUser)
+	}
 
-		//頭像
-		apiRoute.Group("/avatar")
-		{
-			//頭像列表
-			apiRoute.GET("/list", GetAvatarList)
-			//設置頭像
-			apiRoute.POST("/set", SetAvatar)
-		}
+	chatGroup := apiRoute.Group("/chat")
+	{
+		chatGroup.GET("/sync", SyncChat)
+	}
 
-		//群組
-		apiRoute.Group("/group")
-		{
-			//大廳群組列表
-			apiRoute.GET("/lobby", GetLobbyGroup)
-			//我的群組列表
-			apiRoute.GET("/my", GetMyGroup)
-			//群組基本資訊.
-			apiRoute.GET("/info", GetGroupInfo)
-			//加入群組
-			apiRoute.POST("/join", JoinGroup)
-			//退出群組
-			apiRoute.POST("/quit", QuitGroup)
-			//用戶禁言
-			apiRoute.POST("/ban-user", BanUser)
-			//用戶解禁
-			apiRoute.POST("/unban-user", UnbanUser)
-			//踢用戶出群
-			apiRoute.POST("/kick-user", KickUser)
-		}
+	adminRoute := e.Group("/admin")
 
-		//聊天訊息
-		apiRoute.Group("/chat")
-		{
-			//同步歷史訊息
-			apiRoute.GET("/sync", SyncChat)
-		}
+	adminGroupGroup := adminRoute.Group("/group")
+	{
+		adminGroupGroup.POST("/create", CreateGroup)
+		adminGroupGroup.POST("/update", UpdateGroup)
+		adminGroupGroup.POST("/invite", InviteUser)
+		adminGroupGroup.GET("/user", GetUserOfGroup)
+	}
 
-		//後台接口
-		adminRoute := e.Group("/admin")
-		{
-			//群組相關
-			adminRoute.Group("/group")
-			{
-				//創建群組
-				adminRoute.POST("/create", CreateGroup)
-				//更新群組
-				adminRoute.POST("/update", UpdateGroup)
-				//邀請用戶進群
-				adminRoute.POST("/invite", InviteUser)
-				//群組用戶
-				adminRoute.GET("/user", GetUserOfGroup)
-			}
-
-			//用戶相關
-			adminRoute.Group("/user")
-			{
-				//用戶列表
-				adminRoute.GET("/list", GetUserList)
-				//用戶的群組列表
-				adminRoute.GET("/group", GetGroupOfUser)
-				//禁用
-				adminRoute.POST("/forbid", ForbidUser)
-			}
-		}
+	adminUserGroup := adminRoute.Group("/user")
+	{
+		adminUserGroup.GET("/list", GetUserList)
+		adminUserGroup.GET("/group", GetGroupOfUser)
+		adminUserGroup.POST("/forbid", ForbidUser)
 	}
 }

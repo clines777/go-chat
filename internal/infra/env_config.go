@@ -16,27 +16,25 @@ func GetEnvConfig() *EnvConfig {
 		return cfg
 	}
 
-	// 本地開發環境檢查並載入env參數到os
 	envPath := "../.env"
 	_, envFileErr := os.Stat(envPath)
 	if !os.IsNotExist(envFileErr) {
 		_ = godotenv.Load()
 	}
 
-	//載入env配置
-	var cfg EnvConfig
-	if cfgErr := env.Parse(&cfg); cfgErr != nil {
+	var c EnvConfig
+	if cfgErr := env.Parse(&c); cfgErr != nil {
 		log.Fatalf("parse env failed: %v", cfgErr)
 	}
 
-	//動態定義hostname, 作為簡易的server辨識ID
 	hostname, hostNameErr := os.Hostname()
 	if hostNameErr != nil || hostname == "" {
-		log.Fatalf("parse env failed: %v", hostNameErr)
+		log.Fatalf("get hostname failed: %v", hostNameErr)
 	}
-	cfg.ServerName = hostname
+	c.ServerName = hostname
 
-	return &cfg
+	cfg = &c
+	return cfg
 }
 
 type EnvConfig struct {

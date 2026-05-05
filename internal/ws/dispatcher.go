@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/gorilla/websocket"
-	handler "gochat/internal/handler/ws"
 	"gochat/internal/protocol"
 	"sync"
 )
 
 type Ctx struct {
+	ConnID  string
 	Conn    *websocket.Conn
 	Payload protocol.Payload
 }
@@ -23,84 +23,53 @@ type Route struct {
 }
 
 type Dispatcher struct {
-	routes           map[protocol.Type]*Route
-	checkSessionFree map[protocol.Type]bool
-	mu               sync.RWMutex
+	routes map[protocol.Type]*Route
+	mu     sync.RWMutex
 }
 
 func NewDispatcher() *Dispatcher {
-	dispatcher := &Dispatcher{
-		routes:           map[protocol.Type]*Route{},
-		checkSessionFree: map[protocol.Type]bool{},
+	return &Dispatcher{
+		routes: map[protocol.Type]*Route{},
 	}
-
-	dispatcher.checkSessionFree = make(map[protocol.Type]bool)
-	dispatcher.checkSessionFree[protocol.Login] = true
-	dispatcher.checkSessionFree[protocol.Resume] = true
-
-	dispatcher.routes[protocol.Login] = &Route{
-		SessionFree: true,
-		Handler:     handler.Login,
-	}
-
-	dispatcher.routes[protocol.Resume] = &Route{
-		SessionFree: true,
-		Handler:     handler.Resume,
-	}
-
-	dispatcher.routes[protocol.Ping] = &Route{
-		Handler: handler.Ping,
-	}
-
-	dispatcher.routes[protocol.EnterGroup] = &Route{
-		Handler: handler.EnterGroup,
-	}
-
-	dispatcher.routes[protocol.EnterLobby] = &Route{
-		Handler: handler.EnterLobby,
-	}
-
-	dispatcher.routes[protocol.EnterMyGroup] = &Route{
-		Handler: handler.EnterMyGroup,
-	}
-
-	dispatcher.routes[protocol.SendChat] = &Route{
-		Handler: handler.SendChat,
-	}
-
-	return dispatcher
 }
 
-func (d *Dispatcher) Dispatch(conn *websocket.Conn, in []byte) ([]byte, error) {
+func (d *Dispatcher) Register(msgType protocol.Type, route *Route) {
+	d.mu.Lock()
+	d.routes[msgType] = route
+	d.mu.Unlock()
+}
+
+func (d *Dispatcher) Dispatch(client *Client, in []byte) ([]byte, error) {
 	in = bytesTrimSpace(in)
+
 	var p protocol.Payload
 	if len(in) == 0 || json.Unmarshal(in, &p) != nil || p.MsgType == "" {
-		_ = writeJSON(conn, protocol.Payload{MsgType: "error", Remark: "invalid payload"})
-		_ = conn.Close()
+		_ = writeJSON(client.Conn, protocol.Payload{MsgType: protocol.Error, Remark: "invalid payload"})
+		_ = client.Conn.Close()
 		return nil, errors.New("invalid payload")
 	}
 
 	d.mu.RLock()
 	h, ok := d.routes[p.MsgType]
 	d.mu.RUnlock()
+
 	if !ok {
-		_ = writeJSON(conn, protocol.Payload{MsgType: "error", Remark: "unknown id"})
-		_ = conn.Close()
+		_ = writeJSON(client.Conn, protocol.Payload{MsgType: protocol.Error, Remark: "unknown msg type"})
+		_ = client.Conn.Close()
 		return nil, errors.New("unknown msg type")
 	}
 
-	ctx := &Ctx{Conn: conn}
+	ctx := &Ctx{ConnID: client.ConnID, Conn: client.Conn, Payload: p}
 
-	if !d.checkSessionFree[p.MsgType] {
-		sess := GetSocketSession(ctx.Conn)
-		if sess == nil {
-			_ = writeJSON(conn, protocol.Payload{MsgType: "error", Remark: "session lost"})
-			_ = conn.Close()
+	if !h.SessionFree {
+		if GetSocketSession(ctx.ConnID) == nil {
+			_ = writeJSON(client.Conn, protocol.Payload{MsgType: protocol.Error, Remark: "session lost"})
+			_ = client.Conn.Close()
 			return nil, errors.New("session lost")
 		}
 	}
 
-	out, err := h.Handle(ctx, p)
+	return h.Handler(ctx)
 }
 
 func writeJSON(conn *websocket.Conn, v any) error {

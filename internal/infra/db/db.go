@@ -4,9 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/joho/godotenv"
 	"gochat/internal/infra"
-	"os"
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
@@ -27,19 +25,6 @@ func GetDBConn() (*DB, error) {
 
 	if dbConn == nil {
 		cfg := infra.GetEnvConfig()
-		// 本地開發環境檢查並載入env參數
-		envPath := "../.env"
-		_, envFileErr := os.Stat(envPath)
-		if !os.IsNotExist(envFileErr) {
-			_ = godotenv.Load()
-		}
-
-		if cfg.DBSSLMode == "" {
-			cfg.DBSSLMode = "disable"
-		}
-		if cfg.DBTimeZone == "" {
-			cfg.DBTimeZone = "Asia/Taipei"
-		}
 
 		dsn := fmt.Sprintf(
 			"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s timezone=%s",
