@@ -27,6 +27,8 @@ type Dispatcher struct {
 	mu     sync.RWMutex
 }
 
+var Default = NewDispatcher()
+
 func NewDispatcher() *Dispatcher {
 	return &Dispatcher{
 		routes: map[protocol.Type]*Route{},

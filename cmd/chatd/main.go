@@ -6,10 +6,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"gochat/internal/handler/api"
-	wshandler "gochat/internal/handler/ws"
+	_ "gochat/internal/handler/ws"
 	"gochat/internal/infra/db"
 	"gochat/internal/infra/redis"
-	"gochat/internal/protocol"
 	"gochat/internal/ws"
 	"log"
 	"net/http"
@@ -25,17 +24,6 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
-var dispatcher = func() *ws.Dispatcher {
-	d := ws.NewDispatcher()
-	d.Register(protocol.Login, &ws.Route{SessionFree: true, Handler: wshandler.Login})
-	d.Register(protocol.Resume, &ws.Route{SessionFree: true, Handler: wshandler.Resume})
-	d.Register(protocol.Ping, &ws.Route{Handler: wshandler.Ping})
-	d.Register(protocol.EnterGroup, &ws.Route{Handler: wshandler.EnterGroup})
-	d.Register(protocol.EnterLobby, &ws.Route{Handler: wshandler.EnterLobby})
-	d.Register(protocol.EnterMyGroup, &ws.Route{Handler: wshandler.EnterMyGroup})
-	d.Register(protocol.SendChat, &ws.Route{Handler: wshandler.SendChat})
-	return d
-}()
 
 func main() {
 
@@ -123,7 +111,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		output, dispErr := dispatcher.Dispatch(client, input)
+		output, dispErr := ws.Default.Dispatch(client, input)
 		if dispErr != nil {
 			return
 		}
