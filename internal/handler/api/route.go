@@ -30,19 +30,8 @@ func RegisterRoutes(e *gin.Engine) {
 
 	groupGroup := apiRoute.Group("/group")
 	{
-		groupGroup.GET("/lobby", GetLobbyGroup)
-		groupGroup.GET("/my", GetMyGroup)
 		groupGroup.GET("/info", GetGroupInfo)
 		groupGroup.POST("/join", JoinGroup)
-		groupGroup.POST("/quit", QuitGroup)
-		groupGroup.POST("/ban-user", BanUser)
-		groupGroup.POST("/unban-user", UnbanUser)
-		groupGroup.POST("/kick-user", KickUser)
-	}
-
-	chatGroup := apiRoute.Group("/chat")
-	{
-		chatGroup.GET("/sync", SyncChat)
 	}
 
 	adminRoute := e.Group("/admin")

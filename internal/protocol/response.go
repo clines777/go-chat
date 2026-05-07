@@ -9,6 +9,10 @@ type ApiResponse struct {
 	Data    interface{} `json:"data"`
 }
 
+func NewApiResponse(code int, msg string, data map[string]any) *ApiResponse {
+	return &ApiResponse{Code: code, Message: msg, Data: data}
+}
+
 func (r *ApiResponse) Get() map[string]any {
 	return gin.H{"code": r.Code, "msg": r.Message, "data": r.Data}
 }

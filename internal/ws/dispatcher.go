@@ -4,18 +4,16 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"github.com/gorilla/websocket"
 	"gochat/internal/protocol"
 	"sync"
 )
 
 type Ctx struct {
-	ConnID  string
-	Conn    *websocket.Conn
-	Payload protocol.Payload
+	Client  *Client
+	Payload *protocol.Payload
 }
 
-type HandlerFunc func(ctx *Ctx) ([]byte, error)
+type HandlerFunc func(ctx *Ctx) *protocol.Payload
 
 type Route struct {
 	SessionFree bool
@@ -44,10 +42,9 @@ func (d *Dispatcher) Register(msgType protocol.Type, route *Route) {
 func (d *Dispatcher) Dispatch(client *Client, in []byte) ([]byte, error) {
 	in = bytesTrimSpace(in)
 
-	var p protocol.Payload
+	var p *protocol.Payload
 	if len(in) == 0 || json.Unmarshal(in, &p) != nil || p.MsgType == "" {
-		_ = writeJSON(client.Conn, protocol.Payload{MsgType: protocol.Error, Remark: "invalid payload"})
-		_ = client.Conn.Close()
+		writeError(client, "invalid payload")
 		return nil, errors.New("invalid payload")
 	}
 
@@ -56,30 +53,37 @@ func (d *Dispatcher) Dispatch(client *Client, in []byte) ([]byte, error) {
 	d.mu.RUnlock()
 
 	if !ok {
-		_ = writeJSON(client.Conn, protocol.Payload{MsgType: protocol.Error, Remark: "unknown msg type"})
-		_ = client.Conn.Close()
+		writeError(client, "unknown msg type")
 		return nil, errors.New("unknown msg type")
 	}
 
-	ctx := &Ctx{ConnID: client.ConnID, Conn: client.Conn, Payload: p}
+	ctx := &Ctx{Client: client, Payload: p}
 
 	if !h.SessionFree {
-		if GetSocketSession(ctx.ConnID) == nil {
-			_ = writeJSON(client.Conn, protocol.Payload{MsgType: protocol.Error, Remark: "session lost"})
-			_ = client.Conn.Close()
+		if GetSocketSession(client.ConnID) == nil {
+			writeError(client, "session lost")
 			return nil, errors.New("session lost")
 		}
 	}
 
-	return h.Handler(ctx)
+	out := h.Handler(ctx)
+	if out == nil {
+		return nil, nil
+	}
+	b, err := json.Marshal(out)
+	if err != nil {
+		writeError(client, "internal error")
+		return nil, err
+	}
+	return b, nil
 }
 
-func writeJSON(conn *websocket.Conn, v any) error {
-	b, err := json.Marshal(v)
+func writeError(client *Client, remark string) {
+	b, err := json.Marshal(protocol.Payload{MsgType: protocol.Error, Remark: remark})
 	if err != nil {
-		return err
+		return
 	}
-	return conn.WriteMessage(websocket.TextMessage, b)
+	client.TrySend(b)
 }
 
 func bytesTrimSpace(b []byte) []byte {
