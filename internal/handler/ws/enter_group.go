@@ -1,7 +1,10 @@
 package handler
 
-import "gochat/internal/ws"
+import (
+	"gochat/internal/protocol"
+	"gochat/internal/ws"
+)
 
-func EnterGroup(ctx *ws.Ctx) ([]byte, error) {
-	return nil, nil
+func EnterGroup(ctx *ws.Ctx) *protocol.Payload {
+	return nil
 }

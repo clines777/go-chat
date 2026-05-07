@@ -1,7 +1,10 @@
 package handler
 
-import "gochat/internal/ws"
+import (
+	"gochat/internal/protocol"
+	"gochat/internal/ws"
+)
 
-func Resume(ctx *ws.Ctx) ([]byte, error) {
-	return nil, nil
+func Resume(ctx *ws.Ctx) *protocol.Payload {
+	return nil
 }

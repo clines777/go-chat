@@ -9,6 +9,7 @@ import (
 	_ "gochat/internal/handler/ws"
 	"gochat/internal/infra/db"
 	"gochat/internal/infra/redis"
+	"gochat/internal/middleware"
 	"gochat/internal/ws"
 	"log"
 	"net/http"
@@ -23,7 +24,6 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 	CheckOrigin:     func(r *http.Request) bool { return true },
 }
-
 
 func main() {
 
@@ -42,7 +42,7 @@ func main() {
 	}
 
 	r := gin.New()
-	r.Use(gin.Logger(), gin.Recovery())
+	r.Use(middleware.Logger(), gin.Recovery())
 	api.RegisterRoutes(r)
 
 	httpSrv := &http.Server{
@@ -89,12 +89,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	client := ws.NewClient(conn)
-	ws.Register(client)
 	go client.WritePump()
-	defer func() {
-		ws.Unregister(client.ConnID)
-		close(client.Send)
-	}()
 
 	conn.SetPongHandler(func(string) error {
 		_ = conn.SetReadDeadline(time.Now().Add(60 * time.Second))
@@ -106,14 +101,21 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		mt, input, err := conn.ReadMessage()
 		if err != nil {
 			log.Printf("[WS] read error: %v", err)
+			close(client.Send)
 			return
 		}
 		if mt != websocket.TextMessage {
+			ws.Unregister(client.ConnID)
+			close(client.Send)
+			client.Conn.Close()
 			return
 		}
 
 		output, dispErr := ws.Default.Dispatch(client, input)
 		if dispErr != nil {
+			ws.Unregister(client.ConnID)
+			client.Conn.Close()
+			close(client.Send)
 			return
 		}
 

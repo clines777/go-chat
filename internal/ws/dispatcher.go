@@ -4,18 +4,16 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"github.com/gorilla/websocket"
 	"gochat/internal/protocol"
 	"sync"
 )
 
 type Ctx struct {
-	ConnID  string
-	Conn    *websocket.Conn
-	Payload protocol.Payload
+	Client  *Client
+	Payload *protocol.Payload
 }
 
-type HandlerFunc func(ctx *Ctx) ([]byte, error)
+type HandlerFunc func(ctx *Ctx) *protocol.Payload
 
 type Route struct {
 	SessionFree bool
@@ -44,7 +42,7 @@ func (d *Dispatcher) Register(msgType protocol.Type, route *Route) {
 func (d *Dispatcher) Dispatch(client *Client, in []byte) ([]byte, error) {
 	in = bytesTrimSpace(in)
 
-	var p protocol.Payload
+	var p *protocol.Payload
 	if len(in) == 0 || json.Unmarshal(in, &p) != nil || p.MsgType == "" {
 		writeError(client, "invalid payload")
 		return nil, errors.New("invalid payload")
@@ -59,16 +57,25 @@ func (d *Dispatcher) Dispatch(client *Client, in []byte) ([]byte, error) {
 		return nil, errors.New("unknown msg type")
 	}
 
-	ctx := &Ctx{ConnID: client.ConnID, Conn: client.Conn, Payload: p}
+	ctx := &Ctx{Client: client, Payload: p}
 
 	if !h.SessionFree {
-		if GetSocketSession(ctx.ConnID) == nil {
+		if GetSocketSession(client.ConnID) == nil {
 			writeError(client, "session lost")
 			return nil, errors.New("session lost")
 		}
 	}
 
-	return h.Handler(ctx)
+	out := h.Handler(ctx)
+	if out == nil {
+		return nil, nil
+	}
+	b, err := json.Marshal(out)
+	if err != nil {
+		writeError(client, "internal error")
+		return nil, err
+	}
+	return b, nil
 }
 
 func writeError(client *Client, remark string) {

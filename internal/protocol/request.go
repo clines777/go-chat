@@ -1,10 +1,11 @@
 package protocol
 
-type GetLoginTokenReq struct {
-	MemberId     int32  `json:"member_id"`
-	Username     string `json:"username"`
-	SiteBid      string `json:"site_bid"`
-	PlatformType int8   `json:"platform_type"`
+import _ "github.com/go-playground/validator/v10"
+
+type GetTokenReq struct {
+	SiteBid  string `json:"site_bid"`
+	Username string `json:"username"`
+	MemberId int32  `json:"member_id"`
 }
 
 type GetUserInfoReq struct {

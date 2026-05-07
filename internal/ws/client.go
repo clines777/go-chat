@@ -3,10 +3,13 @@ package ws
 import (
 	"crypto/rand"
 	"fmt"
-	"github.com/gorilla/websocket"
 	"log"
 	"sync"
 	"time"
+
+	"github.com/gorilla/websocket"
+	"gochat/internal/infra/redis"
+	"gochat/internal/protocol"
 )
 
 const sendBufSize = 64
@@ -28,7 +31,10 @@ func NewClient(conn *websocket.Conn) *Client {
 }
 
 func (c *Client) WritePump() {
-	defer c.Conn.Close()
+	defer func() {
+		Unregister(c.ConnID)
+		c.Conn.Close()
+	}()
 	for msg := range c.Send {
 		_ = c.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 		if err := c.Conn.WriteMessage(websocket.TextMessage, msg); err != nil {
@@ -60,6 +66,8 @@ func Unregister(connID string) {
 	hub.mu.Lock()
 	delete(hub.clients, connID)
 	hub.mu.Unlock()
+
+	_ = redis.GetRedis().Del(protocol.SessionKey(connID))
 }
 
 func GetClient(connID string) (*Client, bool) {

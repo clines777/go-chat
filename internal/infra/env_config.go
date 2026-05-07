@@ -16,10 +16,10 @@ func GetEnvConfig() *EnvConfig {
 		return cfg
 	}
 
-	envPath := "../.env"
+	envPath := "../../.env"
 	_, envFileErr := os.Stat(envPath)
 	if !os.IsNotExist(envFileErr) {
-		_ = godotenv.Load()
+		_ = godotenv.Load(envPath)
 	}
 
 	var c EnvConfig

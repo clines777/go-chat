@@ -6,9 +6,9 @@ import (
 )
 
 type Session struct {
-	ConnID string `json:"conn_id"`
-	UserID int64  `json:"user_id"`
-	SiteID int64  `json:"site_id"`
+	ConnID  string `json:"conn_id"`
+	UserID  int64  `json:"user_id"`
+	SiteBid string `json:"site_bid"`
 }
 
 func GetSocketSession(connID string) *Session {

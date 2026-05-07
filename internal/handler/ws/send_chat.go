@@ -1,9 +1,10 @@
 package handler
 
 import (
+	"gochat/internal/protocol"
 	"gochat/internal/ws"
 )
 
-func SendChat(ctx *ws.Ctx) ([]byte, error) {
-	return nil, nil
+func SendChat(ctx *ws.Ctx) *protocol.Payload {
+	return nil
 }
