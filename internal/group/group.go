@@ -5,7 +5,7 @@ import (
 	"gochat/internal/protocol"
 )
 
-func GetGroupsOfUser(userID int, siteBid string) ([]protocol.DisplayUserGroup, error) {
+func GetGroupsOfUser(userID int64, siteBid string) ([]protocol.DisplayUserGroup, error) {
 	d, err := db.GetDBConn()
 	if err != nil {
 		return nil, err

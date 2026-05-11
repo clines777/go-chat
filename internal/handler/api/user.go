@@ -6,10 +6,6 @@ func GetUserInfo(c *gin.Context) {
 
 }
 
-func GetUserList(c *gin.Context) {
-
-}
-
 func ForbidUser(c *gin.Context) {
 
 }

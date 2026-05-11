@@ -7,7 +7,7 @@ import (
 
 type Session struct {
 	ConnID  string `json:"conn_id"`
-	UserID  int32  `json:"user_id"`
+	UserID  int64  `json:"user_id"`
 	SiteBid string `json:"site_bid"`
 }
 

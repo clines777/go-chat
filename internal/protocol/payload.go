@@ -21,13 +21,13 @@ type LoginReq struct {
 }
 
 type LoginResp struct {
-	UserID     int32              `json:"user_id"`
+	UserID     int64              `json:"user_id"`
 	Username   string             `json:"username"`
 	UserGroups []DisplayUserGroup `json:"user_groups"`
 }
 
 type DisplayUserGroup struct {
-	Id            int32  `db:"id"`
+	Id            int64  `db:"id"`
 	Title         string `db:"title"`
 	Code          string `db:"code"`
 	OpenJoin      bool   `db:"open_join"`

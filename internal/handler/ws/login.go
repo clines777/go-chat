@@ -26,7 +26,7 @@ func HandleLogin(ctx *ws.Ctx) *protocol.Payload {
 
 	ws.Register(ctx.Client)
 
-	userGroups, err := group.GetGroupsOfUser(int(u.ID), u.SiteBid)
+	userGroups, err := group.GetGroupsOfUser(u.ID, u.SiteBid)
 	if err != nil {
 		return protocol.NewErrPayload(protocol.Error, "fetch groups error", ctx.Payload)
 	}

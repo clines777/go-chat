@@ -95,7 +95,6 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		_ = conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 		return nil
 	})
-	_ = conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 
 	for {
 		mt, input, err := conn.ReadMessage()

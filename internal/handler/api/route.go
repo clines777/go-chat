@@ -33,21 +33,4 @@ func RegisterRoutes(e *gin.Engine) {
 		groupGroup.GET("/info", GetGroupInfo)
 		groupGroup.POST("/join", JoinGroup)
 	}
-
-	adminRoute := e.Group("/admin")
-
-	adminGroupGroup := adminRoute.Group("/group")
-	{
-		adminGroupGroup.POST("/create", CreateGroup)
-		adminGroupGroup.POST("/update", UpdateGroup)
-		adminGroupGroup.POST("/invite", InviteUser)
-		adminGroupGroup.GET("/user", GetUserOfGroup)
-	}
-
-	adminUserGroup := adminRoute.Group("/user")
-	{
-		adminUserGroup.GET("/list", GetUserList)
-		adminUserGroup.GET("/group", GetGroupOfUser)
-		adminUserGroup.POST("/forbid", ForbidUser)
-	}
 }
