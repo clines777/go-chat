@@ -3,7 +3,7 @@ package model
 import "time"
 
 type User struct {
-	ID            int64     `db:"id" json:"id"`
+	ID            int32     `db:"id" json:"id"`
 	SiteBid       string    `db:"site_bid" json:"site_bid"`
 	ExtMemberID   int       `db:"ext_member_id" json:"ext_member_id"`
 	ExtUsername   string    `db:"ext_username" json:"ext_username"`

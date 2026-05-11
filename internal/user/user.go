@@ -73,8 +73,7 @@ func findUser(siteBid string, username string) (*model.User, error) {
 		Limit(1).ToSql()
 
 	var m model.User
-	err = d.DB.Get(&m, findSql, args...)
-	if err != nil && errors.Is(err, sql.ErrNoRows) {
+	if err := d.DB.Get(&m, findSql, args...); err != nil {
 		return nil, err
 	}
 
@@ -110,9 +109,9 @@ func updateUser(u *model.User) (*model.User, error) {
 
 	now := time.Now()
 	_, err = d.Builder.
-		Update("user").
-		Where("id", u.ID).
+		Update("member").
 		Set("last_login_time", now).
+		Where(sq.Eq{"id": u.ID}).
 		RunWith(d.DB).
 		Exec()
 
