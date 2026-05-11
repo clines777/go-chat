@@ -20,6 +20,20 @@ type LoginReq struct {
 	Timestamp int64  `json:"timestamp,omitempty"`
 }
 
+type LoginResp struct {
+	UserID     int32              `json:"user_id"`
+	Username   string             `json:"username"`
+	UserGroups []DisplayUserGroup `json:"user_groups"`
+}
+
+type DisplayUserGroup struct {
+	Id            int32  `db:"id"`
+	Title         string `db:"title"`
+	Code          string `db:"code"`
+	OpenJoin      bool   `db:"open_join"`
+	JoinUserLevel int32  `db:"join_user_level"`
+}
+
 func NewErrPayload(msgType Type, remark string, origin *Payload) *Payload {
 	return &Payload{MsgType: msgType, Remark: remark, Origin: origin}
 }
