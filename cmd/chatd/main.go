@@ -124,7 +124,13 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if len(output) > 0 {
-			client.Send <- output
+			select {
+			case client.Send <- output:
+			default:
+				ws.Unregister(client.ConnID)
+				close(client.Send)
+				return
+			}
 		}
 	}
 }
