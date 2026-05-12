@@ -8,6 +8,7 @@ import (
 	"gochat/internal/infra/redis"
 	"gochat/internal/model"
 	"gochat/internal/protocol"
+	"gochat/internal/session"
 	"gochat/internal/ws"
 	"strings"
 	"time"
@@ -46,14 +47,16 @@ func Login(c *ws.Ctx, tokenInfo *protocol.GetTokenReq) (*model.User, error) {
 		return nil, err
 	}
 
-	sess := &ws.Session{
-		ConnID:  c.Client.ConnID,
-		UserID:  user.ID,
-		SiteBid: tokenInfo.SiteBid,
+	sess := &session.Session{
+		ConnID:    c.Client.ConnID,
+		UserID:    user.ID,
+		SiteBid:   user.SiteBid,
+		InGroupId: 0,
+		Scene:     protocol.SceneMyGroup,
 	}
 
-	r := redis.GetRedis()
-	if err := r.SetJSON(protocol.SessionKey(c.Client.ConnID), sess, 24*time.Hour); err != nil {
+	err = session.Set(c.Client.ConnID, sess)
+	if err != nil {
 		return nil, err
 	}
 

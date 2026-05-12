@@ -23,7 +23,6 @@ func HandleLogin(ctx *ws.Ctx) *protocol.Payload {
 	if err != nil {
 		return protocol.NewErrPayload(protocol.Error, "user login error", ctx.Payload)
 	}
-
 	ws.Register(ctx.Client)
 
 	userGroups, err := group.GetGroupsOfUser(u.ID, u.SiteBid)
