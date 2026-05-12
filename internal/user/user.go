@@ -110,7 +110,7 @@ func updateUser(u *model.User) (*model.User, error) {
 		return nil, err
 	}
 
-	now := time.Now()
+	now := time.Now().Unix()
 	_, err = d.Builder.
 		Update("member").
 		Set("last_login_time", now).

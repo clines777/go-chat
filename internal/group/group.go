@@ -7,7 +7,8 @@ import (
 
 const getGroupsOfUserSQL = `
 SELECT cg.id, cg.title, cg.code, cg.open_join, cg.join_user_level,
-       lr.content AS last_msg, lr.create_time AS last_msg_time
+       COALESCE(lr.content, '') AS last_msg,
+       COALESCE(lr.create_time, '1970-01-01 00:00:00+00') AS last_msg_time
 FROM chat_group cg
 JOIN group_user gu ON gu.group_id = cg.id
     AND gu.user_id = $1

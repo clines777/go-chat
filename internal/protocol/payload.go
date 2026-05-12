@@ -31,13 +31,13 @@ type LoginResp struct {
 }
 
 type DisplayUserGroup struct {
-	Id            int64      `db:"id"             json:"id"`
-	Title         string     `db:"title"          json:"title"`
-	Code          string     `db:"code"           json:"code"`
-	OpenJoin      bool       `db:"open_join"      json:"open_join"`
-	JoinUserLevel int32      `db:"join_user_level" json:"join_user_level"`
-	LastMsg       *string    `db:"last_msg"       json:"last_msg,omitempty"`
-	LastMsgTime   *time.Time `db:"last_msg_time"  json:"last_msg_time,omitempty"`
+	Id            int64     `db:"id"             json:"id"`
+	Title         string    `db:"title"          json:"title"`
+	Code          string    `db:"code"           json:"code"`
+	OpenJoin      bool      `db:"open_join"      json:"open_join"`
+	JoinUserLevel int32     `db:"join_user_level" json:"join_user_level"`
+	LastMsg       string    `db:"last_msg"      json:"last_msg"`
+	LastMsgTime   time.Time `db:"last_msg_time" json:"last_msg_time"`
 }
 
 type EnterGroupReq struct {
