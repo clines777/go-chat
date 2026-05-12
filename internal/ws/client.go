@@ -3,7 +3,6 @@ package ws
 import (
 	"crypto/rand"
 	"fmt"
-	log2 "gochat/internal/log"
 	"log"
 	"sync"
 	"time"
@@ -16,6 +15,7 @@ import (
 const (
 	sendBufSize  = 64
 	pingInterval = 30 * time.Second
+	PongWait     = 60 * time.Second
 	writeTimeout = 10 * time.Second
 )
 
@@ -36,13 +36,12 @@ func NewClient(conn *websocket.Conn) *Client {
 }
 
 func (c *Client) WritePump() {
-	//ticker 搭配內建SetPongHandler
+	//ticker 搭配內建SetPongHandler維持連線生命
 	ticker := time.NewTicker(pingInterval)
 	defer func() {
 		ticker.Stop()
-		Unregister(c.ConnID)
+		Unregister(c.ConnID) //
 		c.Conn.Close()
-		_ = log2.SaveLog(log2.TypeConnErr, c.ConnID)
 	}()
 
 	for {
@@ -63,6 +62,7 @@ func (c *Client) WritePump() {
 				log.Printf("[WS] ping error: %v", err)
 				return
 			}
+			_ = redis.GetRedis().Expire(protocol.SessionKey(c.ConnID), 1*time.Hour)
 		}
 	}
 }
