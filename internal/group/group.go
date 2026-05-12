@@ -5,23 +5,31 @@ import (
 	"gochat/internal/protocol"
 )
 
+const getGroupsOfUserSQL = `
+SELECT cg.id, cg.title, cg.code, cg.open_join, cg.join_user_level,
+       lr.content AS last_msg, lr.create_time AS last_msg_time
+FROM chat_group cg
+JOIN group_user gu ON gu.group_id = cg.id
+    AND gu.user_id = $1
+    AND gu.deleted = false
+LEFT JOIN LATERAL (
+    SELECT content, create_time
+    FROM chat_record
+    WHERE group_id = cg.id AND deleted = false
+    ORDER BY id DESC LIMIT 1
+) lr ON true
+WHERE cg.site_bid = $2
+  AND cg.is_dismiss = false`
+
 func GetGroupsOfUser(userID int64, siteBid string) ([]protocol.DisplayUserGroup, error) {
 	d, err := db.GetDBConn()
 	if err != nil {
 		return nil, err
 	}
 
-	querySql, args, _ := d.Builder.
-		Select("g.title", "g.code", "g.open_join", "g.join_user_level", "g.id").
-		From("chat_group g").
-		InnerJoin("group_user gu ON g.id = gu.group_id").
-		Where("gu.user_id = ?", userID).
-		Where("g.site_bid = ?", siteBid).
-		ToSql()
-
 	rows := make([]protocol.DisplayUserGroup, 0)
-	if err := d.DB.Select(&rows, querySql, args...); err != nil {
-		return rows, nil
+	if err := d.DB.Select(&rows, getGroupsOfUserSQL, userID, siteBid); err != nil {
+		return nil, err
 	}
 
 	return rows, nil

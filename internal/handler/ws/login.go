@@ -39,5 +39,5 @@ func HandleLogin(ctx *ws.Ctx) *protocol.Payload {
 		return protocol.NewErrPayload(protocol.Error, "internal error", ctx.Payload)
 	}
 
-	return &protocol.Payload{MsgType: protocol.LoginOk, Data: respData}
+	return &protocol.Payload{MsgType: protocol.LoginOk, Data: respData, Meta: ctx.Payload.Meta}
 }
