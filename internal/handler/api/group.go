@@ -11,8 +11,38 @@ import (
 	"gochat/internal/user"
 )
 
+// GetGroupInfo - 取得群組資訊頁面展示數據
 func GetGroupInfo(c *gin.Context) {
+	var req protocol.GetGroupInfoReq
+	if err := c.ShouldBindQuery(&req); err != nil || req.GroupID == 0 {
+		c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrWrongParam, "參數錯誤", nil).Get())
+		return
+	}
 
+	g, err := group.FindByID(req.GroupID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorNotFound, "群組不存在", nil).Get())
+		} else {
+			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorUnknown, "系統錯誤", nil).Get())
+		}
+		return
+	}
+
+	count, err := group.GetMemberCount(g.ID)
+	if err != nil {
+		c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorUnknown, "系統錯誤", nil).Get())
+		return
+	}
+
+	c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorNone, "OK", &protocol.GroupInfoResp{
+		Title:         g.Title,
+		UserTotal:     int32(count),
+		Bulletin:      g.Bulletin,
+		OwnerUsername: g.OwnerExtUsername,
+		Code:          g.Code,
+		Remark:        g.Remark,
+	}).Get())
 }
 
 // JoinGroup - 用戶加入群組
@@ -68,7 +98,7 @@ func JoinGroup(c *gin.Context) {
 	c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorNone, "OK", nil).Get())
 }
 
-// CreateGroup 創建群組
+// CreateGroup - 創建群組
 func CreateGroup(c *gin.Context) {
 	var req protocol.CreateGroupReq
 	if err := c.ShouldBindJSON(&req); err != nil {

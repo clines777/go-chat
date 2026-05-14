@@ -22,7 +22,7 @@ func RegisterRoutes(e *gin.Engine) {
 
 	userGroup := protected.Group("/user")
 	{
-		userGroup.GET("/info", GetUserInfo)
+		userGroup.GET("/self", GetUserSelfInfo)
 	}
 
 	avatarGroup := protected.Group("/avatar")

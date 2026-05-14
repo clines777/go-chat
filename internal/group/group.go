@@ -136,7 +136,8 @@ func GetMemberCount(groupID int64) (int, error) {
 
 var groupColumns = []string{
 	"id", "site_bid", "title", "code", "is_dismiss", "open_join",
-	"user_limit", "join_user_level", "speak_user_level", "owner_user_id", "visible",
+	"user_limit", "join_user_level", "speak_user_level", "owner_user_id", "owner_ext_username",
+	"bulletin", "remark", "visible",
 }
 
 func FindByID(groupID int64) (*model.ChatGroup, error) {

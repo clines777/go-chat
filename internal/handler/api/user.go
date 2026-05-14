@@ -1,9 +1,35 @@
 package api
 
-import "github.com/gin-gonic/gin"
+import (
+	"database/sql"
+	"errors"
+	"net/http"
 
-func GetUserInfo(c *gin.Context) {
+	"github.com/gin-gonic/gin"
+	"gochat/internal/protocol"
+	"gochat/internal/user"
+)
 
+func GetUserSelfInfo(c *gin.Context) {
+	userID := c.MustGet("user_id").(int64)
+
+	u, err := user.FindByID(userID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrUserNotFound, "用戶不存在", nil).Get())
+		} else {
+			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorUnknown, "系統錯誤", nil).Get())
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorNone, "OK", &protocol.UserSelfResp{
+		Id:         u.ID,
+		Username:   u.ExtUsername,
+		CreateTime: u.CreateTime,
+		Code:       u.Code,
+		UserLevel:  u.UserLevel,
+	}).Get())
 }
 
 func ForbidUser(c *gin.Context) {

@@ -9,7 +9,7 @@ type ApiResponse struct {
 	Data    interface{} `json:"data"`
 }
 
-func NewApiResponse(code int, msg string, data map[string]any) *ApiResponse {
+func NewApiResponse(code int, msg string, data any) *ApiResponse {
 	return &ApiResponse{Code: code, Message: msg, Data: data}
 }
 
