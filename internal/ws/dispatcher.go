@@ -3,8 +3,8 @@ package ws
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"gochat/internal/protocol"
+	"gochat/internal/session"
 	"sync"
 )
 
@@ -45,7 +45,7 @@ func (d *Dispatcher) Dispatch(client *Client, in []byte) ([]byte, error) {
 	var p *protocol.Payload
 	if len(in) == 0 || json.Unmarshal(in, &p) != nil || p.MsgType == "" {
 		writeError(client, "invalid payload")
-		return nil, errors.New("invalid payload")
+		return nil, &protocol.DispatchError{Code: 4000, Message: "invalid payload"}
 	}
 
 	d.mu.RLock()
@@ -54,15 +54,15 @@ func (d *Dispatcher) Dispatch(client *Client, in []byte) ([]byte, error) {
 
 	if !ok {
 		writeError(client, "unknown msg type")
-		return nil, errors.New("unknown msg type")
+		return nil, &protocol.DispatchError{Code: protocol.ErrUnknownMsgType, Message: "unknown msg type"}
 	}
 
 	ctx := &Ctx{Client: client, Payload: p}
 
 	if !h.SessionFree {
-		if GetSocketSession(client.ConnID) == nil {
-			writeError(client, "session lost")
-			return nil, errors.New("session lost")
+		if session.Get(client.ConnID) == nil {
+			writeError(client, "session required")
+			return nil, &protocol.DispatchError{Code: protocol.ErrSessionRequired, Message: "session required"}
 		}
 	}
 
@@ -73,7 +73,7 @@ func (d *Dispatcher) Dispatch(client *Client, in []byte) ([]byte, error) {
 	b, err := json.Marshal(out)
 	if err != nil {
 		writeError(client, "internal error")
-		return nil, err
+		return nil, &protocol.DispatchError{Code: protocol.ErrInternalError, Message: "internal error", Fatal: true}
 	}
 	return b, nil
 }

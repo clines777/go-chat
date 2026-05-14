@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func genUserCode(siteBid string, extMemberID int32, username string) string {
+func genUserCode(siteBid string, extMemberID int64, username string) string {
 	input := strings.ToLower(siteBid) + fmt.Sprintf("%d", extMemberID) + strings.ToLower(username)
 	hash := sha256.Sum256([]byte(input))
 	return strings.ToUpper(hex.EncodeToString(hash[:])[:9])

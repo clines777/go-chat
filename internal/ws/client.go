@@ -12,7 +12,12 @@ import (
 	"gochat/internal/protocol"
 )
 
-const sendBufSize = 64
+const (
+	sendBufSize  = 64
+	pingInterval = 30 * time.Second
+	PongWait     = 60 * time.Second
+	writeTimeout = 10 * time.Second
+)
 
 type Client struct {
 	ConnID string
@@ -31,15 +36,33 @@ func NewClient(conn *websocket.Conn) *Client {
 }
 
 func (c *Client) WritePump() {
+	//ticker 搭配內建SetPongHandler維持連線生命
+	ticker := time.NewTicker(pingInterval)
 	defer func() {
-		Unregister(c.ConnID)
+		ticker.Stop()
+		Unregister(c.ConnID) //
 		c.Conn.Close()
 	}()
-	for msg := range c.Send {
-		_ = c.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-		if err := c.Conn.WriteMessage(websocket.TextMessage, msg); err != nil {
-			log.Printf("[WS] write error: %v", err)
-			return
+
+	for {
+		select {
+		case msg, ok := <-c.Send:
+			_ = c.Conn.SetWriteDeadline(time.Now().Add(writeTimeout))
+			if !ok {
+				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
+				return
+			}
+			if err := c.Conn.WriteMessage(websocket.TextMessage, msg); err != nil {
+				log.Printf("[WS] write error: %v", err)
+				return
+			}
+		case <-ticker.C:
+			_ = c.Conn.SetWriteDeadline(time.Now().Add(writeTimeout))
+			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				log.Printf("[WS] ping error: %v", err)
+				return
+			}
+			_ = redis.GetRedis().Expire(protocol.SessionKey(c.ConnID), 1*time.Hour)
 		}
 	}
 }

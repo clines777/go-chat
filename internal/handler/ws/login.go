@@ -21,24 +21,30 @@ func HandleLogin(ctx *ws.Ctx) *protocol.Payload {
 
 	u, err := user.Login(ctx, tokenInfo)
 	if err != nil {
+		ctx.Client.Conn.Close()
 		return protocol.NewErrPayload(protocol.Error, "user login error", ctx.Payload)
 	}
-
 	ws.Register(ctx.Client)
 
-	userGroups, err := group.GetGroupsOfUser(int(u.ID), u.SiteBid)
+	userGroups, err := group.GetGroupsOfUser(u.ID, u.SiteBid)
 	if err != nil {
 		return protocol.NewErrPayload(protocol.Error, "fetch groups error", ctx.Payload)
+	}
+
+	apiToken, err := user.GenerateApiToken(u.ID, u.SiteBid)
+	if err != nil {
+		return protocol.NewErrPayload(protocol.Error, "internal error", ctx.Payload)
 	}
 
 	respData, err := json.Marshal(&protocol.LoginResp{
 		UserID:     u.ID,
 		Username:   u.ExtUsername,
+		ApiToken:   apiToken,
 		UserGroups: userGroups,
 	})
 	if err != nil {
 		return protocol.NewErrPayload(protocol.Error, "internal error", ctx.Payload)
 	}
 
-	return &protocol.Payload{MsgType: protocol.LoginOk, Data: respData}
+	return &protocol.Payload{MsgType: protocol.LoginOk, Data: respData, Meta: ctx.Payload.Meta}
 }

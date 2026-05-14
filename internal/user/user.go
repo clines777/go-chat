@@ -1,17 +1,33 @@
 package user
 
 import (
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
 	"errors"
 	sq "github.com/Masterminds/squirrel"
 	"gochat/internal/infra/db"
 	"gochat/internal/infra/redis"
 	"gochat/internal/model"
 	"gochat/internal/protocol"
+	"gochat/internal/session"
 	"gochat/internal/ws"
 	"strings"
 	"time"
 )
+
+func GenerateApiToken(userID int64, siteBid string) (string, error) {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	token := hex.EncodeToString(b)
+	payload := protocol.ApiTokenPayload{UserID: userID, SiteBid: siteBid}
+	if err := redis.GetRedis().SetJSON(protocol.ApiTokenKey(token), payload, 24*time.Hour); err != nil {
+		return "", err
+	}
+	return token, nil
+}
 
 func GetLoginToken(req protocol.LoginReq) (*protocol.GetTokenReq, error) {
 	r := redis.GetRedis()
@@ -46,14 +62,16 @@ func Login(c *ws.Ctx, tokenInfo *protocol.GetTokenReq) (*model.User, error) {
 		return nil, err
 	}
 
-	sess := &ws.Session{
-		ConnID:  c.Client.ConnID,
-		UserID:  user.ID,
-		SiteBid: tokenInfo.SiteBid,
+	sess := &session.Session{
+		ConnID:    c.Client.ConnID,
+		UserID:    user.ID,
+		SiteBid:   user.SiteBid,
+		InGroupId: 0,
+		Scene:     protocol.SceneMyGroup,
 	}
 
-	r := redis.GetRedis()
-	if err := r.SetJSON(protocol.SessionKey(c.Client.ConnID), sess, 24*time.Hour); err != nil {
+	err = session.Set(c.Client.ConnID, sess)
+	if err != nil {
 		return nil, err
 	}
 
@@ -67,9 +85,51 @@ func findUser(siteBid string, username string) (*model.User, error) {
 	}
 
 	findSql, args, _ := d.Builder.
-		Select("*").
-		From("user").
+		Select("id", "site_bid", "ext_member_id", "ext_username", "code", "user_level", "is_suspended", "avatar_id").
+		From(`"user"`).
 		Where(sq.Eq{"site_bid": siteBid, "ext_username": username}).
+		Limit(1).ToSql()
+
+	var m model.User
+	if err := d.DB.Get(&m, findSql, args...); err != nil {
+		return nil, err
+	}
+
+	return &m, nil
+}
+
+var userColumns = []string{"id", "site_bid", "ext_member_id", "ext_username", "code", "user_level", "is_suspended", "avatar_id"}
+
+func FindByID(userID int64) (*model.User, error) {
+	d, err := db.GetDBConn()
+	if err != nil {
+		return nil, err
+	}
+
+	findSql, args, _ := d.Builder.
+		Select(userColumns...).
+		From(`"user"`).
+		Where(sq.Eq{"id": userID}).
+		Limit(1).ToSql()
+
+	var m model.User
+	if err := d.DB.Get(&m, findSql, args...); err != nil {
+		return nil, err
+	}
+
+	return &m, nil
+}
+
+func FindByExtMember(siteBid string, extMemberID int64) (*model.User, error) {
+	d, err := db.GetDBConn()
+	if err != nil {
+		return nil, err
+	}
+
+	findSql, args, _ := d.Builder.
+		Select(userColumns...).
+		From(`"user"`).
+		Where(sq.Eq{"site_bid": siteBid, "ext_member_id": extMemberID}).
 		Limit(1).ToSql()
 
 	var m model.User
@@ -107,7 +167,7 @@ func updateUser(u *model.User) (*model.User, error) {
 		return nil, err
 	}
 
-	now := time.Now()
+	now := time.Now().Unix()
 	_, err = d.Builder.
 		Update("member").
 		Set("last_login_time", now).

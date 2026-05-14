@@ -21,17 +21,30 @@ type LoginReq struct {
 }
 
 type LoginResp struct {
-	UserID     int32              `json:"user_id"`
+	UserID     int64              `json:"user_id"`
 	Username   string             `json:"username"`
+	ApiToken   string             `json:"api_token"`
 	UserGroups []DisplayUserGroup `json:"user_groups"`
 }
 
 type DisplayUserGroup struct {
-	Id            int32  `db:"id"`
-	Title         string `db:"title"`
-	Code          string `db:"code"`
-	OpenJoin      bool   `db:"open_join"`
-	JoinUserLevel int32  `db:"join_user_level"`
+	Id            int64     `db:"id"             json:"id"`
+	Title         string    `db:"title"          json:"title"`
+	Code          string    `db:"code"           json:"code"`
+	OpenJoin      bool      `db:"open_join"      json:"open_join"`
+	JoinUserLevel int32     `db:"join_user_level" json:"join_user_level"`
+	LastMsg     string `db:"last_msg"      json:"last_msg"`
+	LastMsgTime int64  `db:"last_msg_time" json:"last_msg_time"`
+}
+
+type EnterGroupReq struct {
+	GroupId int32 `json:"group_id" validate:"required"`
+}
+
+type EnterGroupResp struct {
+	Title          string `json:"title" json:"title"`
+	GroupId        int32  `json:"group_id" json:"group_id"`
+	GroupUserCount int32  `json:"group_user_count" json:"group_user_count"`
 }
 
 func NewErrPayload(msgType Type, remark string, origin *Payload) *Payload {

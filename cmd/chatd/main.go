@@ -10,6 +10,7 @@ import (
 	"gochat/internal/infra/db"
 	"gochat/internal/infra/redis"
 	"gochat/internal/middleware"
+	"gochat/internal/protocol"
 	"gochat/internal/ws"
 	"log"
 	"net/http"
@@ -92,10 +93,9 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	go client.WritePump()
 
 	conn.SetPongHandler(func(string) error {
-		_ = conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		_ = conn.SetReadDeadline(time.Now().Add(ws.PongWait))
 		return nil
 	})
-	_ = conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 
 	for {
 		mt, input, err := conn.ReadMessage()
@@ -111,16 +111,26 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		output, dispErr := ws.Default.Dispatch(client, input)
-		if dispErr != nil {
-			ws.Unregister(client.ConnID)
-			client.Conn.Close()
-			close(client.Send)
-			return
+		output, dispatchErr := ws.Default.Dispatch(client, input)
+		if dispatchErr != nil {
+			var de *protocol.DispatchError
+			if errors.As(dispatchErr, &de) && de.Fatal {
+				ws.Unregister(client.ConnID)
+				client.Conn.Close()
+				close(client.Send)
+				return
+			}
+			continue
 		}
 
 		if len(output) > 0 {
-			client.Send <- output
+			select {
+			case client.Send <- output:
+			default:
+				ws.Unregister(client.ConnID)
+				close(client.Send)
+				return
+			}
 		}
 	}
 }

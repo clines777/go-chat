@@ -15,6 +15,7 @@ import (
 
 const salt = "CsXGM2ArECWqoLT0BKst"
 
+// GetLoginToken - 包網端登入用API, 傳入帳號資訊順帶生成websocket登入用Token放redis, 先省略加密
 func GetLoginToken(c *gin.Context) {
 	var req protocol.GetTokenReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -28,8 +29,7 @@ func GetLoginToken(c *gin.Context) {
 	}
 
 	token := genLoginToken(&req)
-
-	if err := redis.GetRedis().SetJSON(protocol.LoginTokenKey(token), req, 5*time.Minute); err != nil {
+	if err := redis.GetRedis().SetJSON(protocol.LoginTokenKey(token), req, 10*time.Second); err != nil {
 		c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorUnknown, "系統錯誤", nil).Get())
 		return
 	}
