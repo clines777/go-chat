@@ -13,18 +13,17 @@ type GetUserInfoReq struct {
 	UserId int64 `form:"user_id"`
 }
 
-type ApiToken struct {
-	ApiToken string `json:"api_token"`
+type ApiTokenPayload struct {
+	UserID  int64  `json:"user_id"`
+	SiteBid string `json:"site_bid"`
 }
 
 type JoinGroupReq struct {
-	UserID  int64 `json:"user_id"  binding:"required"`
 	GroupID int64 `json:"group_id" binding:"required"`
 }
 
 type CreateGroupReq struct {
-	UserID    int64  `json:"user_id"   binding:"required"`
-	Title     string `json:"title"     binding:"required"`
+	Title     string `json:"title" binding:"required"`
 	Code      string `json:"code"`
 	UserLimit int    `json:"user_limit"`
 	Bulletin  string `json:"bulletin"`

@@ -7,6 +7,7 @@ var (
 	ErrWrongParam   = 3
 	ErrInvalidParam = 4
 	ErrUserNotFound = 5
+	ErrUnauthorized = 401
 
 	ErrUnknownMsgType  = 4001
 	ErrSessionRequired = 4003

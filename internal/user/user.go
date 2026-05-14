@@ -1,7 +1,9 @@
 package user
 
 import (
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
 	"errors"
 	sq "github.com/Masterminds/squirrel"
 	"gochat/internal/infra/db"
@@ -13,6 +15,19 @@ import (
 	"strings"
 	"time"
 )
+
+func GenerateApiToken(userID int64, siteBid string) (string, error) {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	token := hex.EncodeToString(b)
+	payload := protocol.ApiTokenPayload{UserID: userID, SiteBid: siteBid}
+	if err := redis.GetRedis().SetJSON(protocol.ApiTokenKey(token), payload, 24*time.Hour); err != nil {
+		return "", err
+	}
+	return token, nil
+}
 
 func GetLoginToken(req protocol.LoginReq) (*protocol.GetTokenReq, error) {
 	r := redis.GetRedis()

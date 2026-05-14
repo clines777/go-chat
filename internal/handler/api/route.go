@@ -2,6 +2,7 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
+	"gochat/internal/middleware"
 	"gochat/internal/protocol"
 )
 
@@ -17,18 +18,20 @@ func RegisterRoutes(e *gin.Engine) {
 		authGroup.POST("/get-login-token", GetLoginToken)
 	}
 
-	userGroup := apiRoute.Group("/user")
+	protected := apiRoute.Group("", middleware.Auth())
+
+	userGroup := protected.Group("/user")
 	{
 		userGroup.GET("/info", GetUserInfo)
 	}
 
-	avatarGroup := apiRoute.Group("/avatar")
+	avatarGroup := protected.Group("/avatar")
 	{
 		avatarGroup.GET("/list", GetAvatarList)
 		avatarGroup.POST("/set", SetAvatar)
 	}
 
-	groupGroup := apiRoute.Group("/group")
+	groupGroup := protected.Group("/group")
 	{
 		groupGroup.POST("/create", CreateGroup)
 		groupGroup.GET("/info", GetGroupInfo)

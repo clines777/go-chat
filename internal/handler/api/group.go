@@ -23,7 +23,9 @@ func JoinGroup(c *gin.Context) {
 		return
 	}
 
-	u, err := user.FindByID(req.UserID)
+	userID := c.MustGet("user_id").(int64)
+
+	u, err := user.FindByID(userID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrUserNotFound, "用戶不存在", nil).Get())
@@ -74,10 +76,12 @@ func CreateGroup(c *gin.Context) {
 		return
 	}
 
-	owner, err := user.FindByID(req.UserID)
+	userID := c.MustGet("user_id").(int64)
+
+	owner, err := user.FindByID(userID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorNotFound, "用戶不存在", nil).Get())
+			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrUserNotFound, "用戶不存在", nil).Get())
 		} else {
 			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorUnknown, "系統錯誤", nil).Get())
 		}
