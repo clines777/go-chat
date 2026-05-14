@@ -8,7 +8,7 @@ import (
 
 func RegisterRoutes(e *gin.Engine) {
 	e.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, (&protocol.ApiResponse{Code: protocol.ErrorNone, Message: "OK"}).Get())
+		c.JSON(200, (&protocol.ApiResponse{Code: protocol.ErrorNone, Message: "OK"}).H())
 	})
 
 	apiRoute := e.Group("/api")
@@ -27,7 +27,7 @@ func RegisterRoutes(e *gin.Engine) {
 
 	avatarGroup := protected.Group("/avatar")
 	{
-		avatarGroup.GET("/list", GetAvatarList)
+		avatarGroup.GET("/list", GetAvatars)
 		avatarGroup.POST("/set", SetAvatar)
 	}
 

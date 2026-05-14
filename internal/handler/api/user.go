@@ -16,9 +16,9 @@ func GetUserSelfInfo(c *gin.Context) {
 	u, err := user.FindByID(userID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrUserNotFound, "用戶不存在", nil).Get())
+			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrUserNotFound, "用戶不存在", nil).H())
 		} else {
-			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorUnknown, "系統錯誤", nil).Get())
+			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorUnknown, "系統錯誤", nil).H())
 		}
 		return
 	}
@@ -29,7 +29,7 @@ func GetUserSelfInfo(c *gin.Context) {
 		CreateTime: u.CreateTime,
 		Code:       u.Code,
 		UserLevel:  u.UserLevel,
-	}).Get())
+	}).H())
 }
 
 func ForbidUser(c *gin.Context) {

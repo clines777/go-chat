@@ -90,12 +90,12 @@ func findUser(siteBid string, username string) (*model.User, error) {
 		Where(sq.Eq{"site_bid": siteBid, "ext_username": username}).
 		Limit(1).ToSql()
 
-	var m model.User
-	if err := d.DB.Get(&m, findSql, args...); err != nil {
+	var u model.User
+	if err := d.DB.Get(&u, findSql, args...); err != nil {
 		return nil, err
 	}
 
-	return &m, nil
+	return &u, nil
 }
 
 var userColumns = []string{"id", "site_bid", "ext_member_id", "ext_username", "code", "user_level", "is_suspended", "avatar_id"}
@@ -159,6 +159,20 @@ func createUser(tokenInfo *protocol.GetTokenReq, userCode string) (*model.User, 
 		return nil, err
 	}
 	return &u, nil
+}
+
+func UpdateAvatar(userID int64, avatarID int32) error {
+	d, err := db.GetDBConn()
+	if err != nil {
+		return err
+	}
+
+	_, err = d.Builder.
+		Update(`"user"`).
+		Set("avatar_id", avatarID).
+		Where(sq.Eq{"id": userID}).
+		RunWith(d.DB).Exec()
+	return err
 }
 
 func updateUser(u *model.User) (*model.User, error) {

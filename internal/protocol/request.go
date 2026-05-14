@@ -33,3 +33,7 @@ type CreateGroupReq struct {
 	Bulletin  string `json:"bulletin"`
 	OpenJoin  bool   `json:"open_join"`
 }
+
+type SetAvatarReq struct {
+	AvatarId int32 `json:"avatar_id" binding:"required"`
+}
