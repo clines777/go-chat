@@ -13,7 +13,7 @@ type ChatGroup struct {
 	AllowURL              bool   `db:"allow_url" json:"allow_url"`
 	PinChatID             int64  `db:"pin_chat_id" json:"pin_chat_id"`
 	SpeakUserLevel        int    `db:"speak_user_level" json:"speak_user_level"`
-	JoinUserLevel         int    `db:"join_user_level" json:"join_user_level"`
+	JoinUserLevel         int32  `db:"join_user_level" json:"join_user_level"`
 	OwnerExtMemberID      int    `db:"owner_ext_member_id" json:"owner_ext_member_id"`
 	OwnerExtUsername      string `db:"owner_ext_username" json:"owner_ext_username"`
 	OwnerUserID           int    `db:"owner_user_id" json:"owner_user_id"`

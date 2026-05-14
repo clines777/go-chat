@@ -13,6 +13,10 @@ type GetUserInfoReq struct {
 	UserId int64 `form:"user_id"`
 }
 
+type GetGroupInfoReq struct {
+	GroupID int64 `form:"group_id"`
+}
+
 type ApiTokenPayload struct {
 	UserID  int64  `json:"user_id"`
 	SiteBid string `json:"site_bid"`
@@ -28,4 +32,8 @@ type CreateGroupReq struct {
 	UserLimit int    `json:"user_limit"`
 	Bulletin  string `json:"bulletin"`
 	OpenJoin  bool   `json:"open_join"`
+}
+
+type SetAvatarReq struct {
+	AvatarId int32 `json:"avatar_id" binding:"required"`
 }

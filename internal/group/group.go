@@ -37,23 +37,6 @@ func genCode(siteBid string) string {
 	return prefix + hex.EncodeToString(b)
 }
 
-const getGroupsOfUserSQL = `
-SELECT cg.id, cg.title, cg.code, cg.open_join, cg.join_user_level,
-       COALESCE(lr.content, '') AS last_msg,
-       COALESCE(EXTRACT(EPOCH FROM lr.create_time)::bigint, 0) AS last_msg_time
-FROM chat_group cg
-JOIN group_user gu ON gu.group_id = cg.id
-    AND gu.user_id = $1
-    AND gu.deleted = false
-LEFT JOIN LATERAL (
-    SELECT content, create_time
-    FROM chat_record
-    WHERE group_id = cg.id AND deleted = false
-    ORDER BY id DESC LIMIT 1
-) lr ON true
-WHERE cg.site_bid = $2
-  AND cg.is_dismiss = false`
-
 func Create(req *protocol.CreateGroupReq, owner *model.User) (int64, string, error) {
 	d, err := db.GetDBConn()
 	if err != nil {
@@ -69,7 +52,6 @@ func Create(req *protocol.CreateGroupReq, owner *model.User) (int64, string, err
 	if err != nil {
 		return 0, "", err
 	}
-	defer tx.Rollback()
 
 	var groupID int64
 	err = d.Builder.
@@ -83,6 +65,7 @@ func Create(req *protocol.CreateGroupReq, owner *model.User) (int64, string, err
 		QueryRow().
 		Scan(&groupID)
 	if err != nil {
+		tx.Rollback()
 		return 0, "", err
 	}
 
@@ -93,10 +76,16 @@ func Create(req *protocol.CreateGroupReq, owner *model.User) (int64, string, err
 		RunWith(tx).
 		Exec()
 	if err != nil {
+		tx.Rollback()
 		return 0, "", err
 	}
 
-	return groupID, code, tx.Commit()
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		return 0, "", err
+	}
+
+	return groupID, code, nil
 }
 
 func GetMembership(userID int64, groupID int64) (*model.GroupUser, error) {
@@ -136,7 +125,8 @@ func GetMemberCount(groupID int64) (int, error) {
 
 var groupColumns = []string{
 	"id", "site_bid", "title", "code", "is_dismiss", "open_join",
-	"user_limit", "join_user_level", "speak_user_level", "owner_user_id", "visible",
+	"user_limit", "join_user_level", "speak_user_level", "owner_user_id", "owner_ext_username",
+	"bulletin", "remark", "visible",
 }
 
 func FindByID(groupID int64) (*model.ChatGroup, error) {
@@ -221,6 +211,23 @@ func Join(u *model.User, g *model.ChatGroup) error {
 		RunWith(d.DB).Exec()
 	return err
 }
+
+const getGroupsOfUserSQL = `
+SELECT cg.id, cg.title, cg.code, cg.open_join, cg.join_user_level,
+       COALESCE(lr.content, '') AS last_msg,
+       COALESCE(EXTRACT(EPOCH FROM lr.create_time)::bigint, 0) AS last_msg_time
+FROM chat_group cg
+JOIN group_user gu ON gu.group_id = cg.id
+    AND gu.user_id = $1
+    AND gu.deleted = false
+LEFT JOIN LATERAL (
+    SELECT content, create_time
+    FROM chat_record
+    WHERE group_id = cg.id AND deleted = false
+    ORDER BY id DESC LIMIT 1
+) lr ON true
+WHERE cg.site_bid = $2
+  AND cg.is_dismiss = false`
 
 func GetGroupsOfUser(userID int64, siteBid string) ([]protocol.DisplayUserGroup, error) {
 	d, err := db.GetDBConn()

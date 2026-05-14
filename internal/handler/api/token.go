@@ -19,24 +19,24 @@ const salt = "CsXGM2ArECWqoLT0BKst"
 func GetLoginToken(c *gin.Context) {
 	var req protocol.GetTokenReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrWrongParam, "參數錯誤", nil).Get())
+		c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrWrongParam, "參數錯誤", nil).H())
 		return
 	}
 
 	if req.SiteBid == "" || req.Username == "" || req.MemberId == 0 {
-		c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrWrongParam, "site_bid, username, member_id 不可為空", nil).Get())
+		c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrWrongParam, "site_bid, username, member_id 不可為空", nil).H())
 		return
 	}
 
 	token := genLoginToken(&req)
 	if err := redis.GetRedis().SetJSON(protocol.LoginTokenKey(token), req, 10*time.Second); err != nil {
-		c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorUnknown, "系統錯誤", nil).Get())
+		c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorUnknown, "系統錯誤", nil).H())
 		return
 	}
 
 	c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorNone, "OK", map[string]any{
 		"token": token,
-	}).Get())
+	}).H())
 }
 
 func genLoginToken(req *protocol.GetTokenReq) string {
