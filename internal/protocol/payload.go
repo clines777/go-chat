@@ -1,10 +1,6 @@
 package protocol
 
-import (
-	"time"
-
-	_ "github.com/go-playground/validator/v10"
-)
+import _ "github.com/go-playground/validator/v10"
 
 type Payload struct {
 	MsgType Type   `json:"msg_type"`
@@ -36,8 +32,8 @@ type DisplayUserGroup struct {
 	Code          string    `db:"code"           json:"code"`
 	OpenJoin      bool      `db:"open_join"      json:"open_join"`
 	JoinUserLevel int32     `db:"join_user_level" json:"join_user_level"`
-	LastMsg       string    `db:"last_msg"      json:"last_msg"`
-	LastMsgTime   time.Time `db:"last_msg_time" json:"last_msg_time"`
+	LastMsg     string `db:"last_msg"      json:"last_msg"`
+	LastMsgTime int64  `db:"last_msg_time" json:"last_msg_time"`
 }
 
 type EnterGroupReq struct {

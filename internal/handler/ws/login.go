@@ -21,6 +21,7 @@ func HandleLogin(ctx *ws.Ctx) *protocol.Payload {
 
 	u, err := user.Login(ctx, tokenInfo)
 	if err != nil {
+		ctx.Client.Conn.Close()
 		return protocol.NewErrPayload(protocol.Error, "user login error", ctx.Payload)
 	}
 	ws.Register(ctx.Client)

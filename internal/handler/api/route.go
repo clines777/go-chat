@@ -30,6 +30,7 @@ func RegisterRoutes(e *gin.Engine) {
 
 	groupGroup := apiRoute.Group("/group")
 	{
+		groupGroup.POST("/create", CreateGroup)
 		groupGroup.GET("/info", GetGroupInfo)
 		groupGroup.POST("/join", JoinGroup)
 	}

@@ -7,9 +7,9 @@ type ChatGroup struct {
 	Sort                  int    `db:"sort" json:"sort"`
 	Visible               bool   `db:"visible" json:"visible"`
 	Code                  string `db:"code" json:"code"`
+	OpenJoin              bool   `db:"open_join" json:"open_join"`
 	UserLimit             int    `db:"user_limit" json:"user_limit"`
 	Bulletin              string `db:"bulletin" json:"bulletin"`
-	OpenJoin              bool   `db:"open_join" json:"open_join"`
 	AllowURL              bool   `db:"allow_url" json:"allow_url"`
 	PinChatID             int64  `db:"pin_chat_id" json:"pin_chat_id"`
 	SpeakUserLevel        int    `db:"speak_user_level" json:"speak_user_level"`

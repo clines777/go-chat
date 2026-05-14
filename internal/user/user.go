@@ -70,9 +70,51 @@ func findUser(siteBid string, username string) (*model.User, error) {
 	}
 
 	findSql, args, _ := d.Builder.
-		Select("*").
-		From("user").
+		Select("id", "site_bid", "ext_member_id", "ext_username", "code", "user_level", "is_suspended", "avatar_id").
+		From(`"user"`).
 		Where(sq.Eq{"site_bid": siteBid, "ext_username": username}).
+		Limit(1).ToSql()
+
+	var m model.User
+	if err := d.DB.Get(&m, findSql, args...); err != nil {
+		return nil, err
+	}
+
+	return &m, nil
+}
+
+var userColumns = []string{"id", "site_bid", "ext_member_id", "ext_username", "code", "user_level", "is_suspended", "avatar_id"}
+
+func FindByID(userID int64) (*model.User, error) {
+	d, err := db.GetDBConn()
+	if err != nil {
+		return nil, err
+	}
+
+	findSql, args, _ := d.Builder.
+		Select(userColumns...).
+		From(`"user"`).
+		Where(sq.Eq{"id": userID}).
+		Limit(1).ToSql()
+
+	var m model.User
+	if err := d.DB.Get(&m, findSql, args...); err != nil {
+		return nil, err
+	}
+
+	return &m, nil
+}
+
+func FindByExtMember(siteBid string, extMemberID int64) (*model.User, error) {
+	d, err := db.GetDBConn()
+	if err != nil {
+		return nil, err
+	}
+
+	findSql, args, _ := d.Builder.
+		Select(userColumns...).
+		From(`"user"`).
+		Where(sq.Eq{"site_bid": siteBid, "ext_member_id": extMemberID}).
 		Limit(1).ToSql()
 
 	var m model.User
