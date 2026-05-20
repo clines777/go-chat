@@ -5,6 +5,7 @@ type User struct {
 	SiteBid       string `db:"site_bid" json:"site_bid"`
 	ExtMemberID   int64  `db:"ext_member_id" json:"ext_member_id"`
 	ExtUsername   string `db:"ext_username" json:"ext_username"`
+	Nickname      string `db:"nickname" json:"nickname"`
 	LastLoginTime int64  `db:"last_login_time" json:"last_login_time"`
 	AvatarID      int32  `db:"avatar_id" json:"avatar_id"`
 	UserLevel     int32  `db:"user_level" json:"user_level"`
