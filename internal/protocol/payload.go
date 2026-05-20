@@ -6,6 +6,7 @@ import (
 
 type Payload struct {
 	MsgType Type   `json:"msg_type"`
+	ErrCode int    `json:"err_code,omitempty"`
 	Remark  string `json:"remark,omitempty"`
 	Data    []byte `json:"data,omitempty"`
 	Meta    *Meta  `json:"meta,omitempty"`
@@ -39,6 +40,30 @@ type DisplayUserGroup struct {
 	LastMsgTime   int64  `db:"last_msg_time" json:"last_msg_time"`
 }
 
+type EnterLobbyReq struct {
+	Page int32 `json:"page"`
+}
+
+type DisplayLobbyGroup struct {
+	Id          int64  `db:"id"           json:"id"`
+	Title       string `db:"title"        json:"title"`
+	MemberCount int32  `db:"member_count" json:"member_count"`
+}
+
+type EnterLobbyResp struct {
+	Page   int32               `json:"page"`
+	Groups []DisplayLobbyGroup `json:"groups"`
+}
+
+type EnterMyGroupReq struct {
+	Page int32 `json:"page"`
+}
+
+type EnterMyGroupResp struct {
+	Page   int32              `json:"page"`
+	Groups []DisplayUserGroup `json:"groups"`
+}
+
 type EnterGroupReq struct {
 	GroupId int32 `json:"group_id" validate:"required"`
 }
@@ -66,6 +91,6 @@ type GroupInfoResp struct {
 	Remark        string `json:"remark"`
 }
 
-func NewErrPayload(msgType Type, remark string, origin *Payload) *Payload {
-	return &Payload{MsgType: msgType, Remark: remark, Origin: origin}
+func NewErrPayload(errCode int, remark string, origin *Payload) *Payload {
+	return &Payload{MsgType: Error, ErrCode: errCode, Remark: remark, Origin: origin}
 }

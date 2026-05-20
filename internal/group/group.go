@@ -212,7 +212,7 @@ func Join(u *model.User, g *model.ChatGroup) error {
 	return err
 }
 
-const getGroupsOfUserSQL = `
+const getMyGroupsSQL = `
 SELECT cg.id, cg.title, cg.code, cg.open_join, cg.join_user_level,
        COALESCE(lr.content, '') AS last_msg,
        COALESCE(EXTRACT(EPOCH FROM lr.create_time)::bigint, 0) AS last_msg_time
@@ -229,14 +229,84 @@ LEFT JOIN LATERAL (
 WHERE cg.site_bid = $2
   AND cg.is_dismiss = false`
 
-func GetGroupsOfUser(userID int64, siteBid string) ([]protocol.DisplayUserGroup, error) {
+const getLobbyGroupsSQL = `
+SELECT cg.id, cg.title, COALESCE(gu_count.cnt, 0)::int AS member_count
+FROM chat_group cg
+LEFT JOIN (
+    SELECT group_id, COUNT(*) AS cnt
+    FROM group_user
+    WHERE deleted = false
+    GROUP BY group_id
+) gu_count ON gu_count.group_id = cg.id
+WHERE cg.site_bid = $1
+  AND cg.visible = true
+  AND cg.open_join = true
+  AND cg.is_dismiss = false
+ORDER BY cg.sort ASC
+LIMIT $2 OFFSET $3`
+
+const LobbyPageSize = 20
+const MyGroupPageSize = 20
+
+const getMyGroupsPagedSQL = `
+SELECT cg.id, cg.title, cg.code, cg.open_join, cg.join_user_level,
+       COALESCE(lr.content, '') AS last_msg,
+       COALESCE(EXTRACT(EPOCH FROM lr.create_time)::bigint, 0) AS last_msg_time
+FROM chat_group cg
+JOIN group_user gu ON gu.group_id = cg.id
+    AND gu.user_id = $1
+    AND gu.deleted = false
+LEFT JOIN LATERAL (
+    SELECT content, create_time
+    FROM chat_record
+    WHERE group_id = cg.id AND deleted = false
+    ORDER BY id DESC LIMIT 1
+) lr ON true
+WHERE cg.site_bid = $2
+  AND cg.is_dismiss = false
+ORDER BY last_msg_time DESC, cg.id ASC
+LIMIT $3 OFFSET $4`
+
+func GetLobbyGroups(siteBid string, page int32) ([]protocol.DisplayLobbyGroup, error) {
+	d, err := db.GetDBConn()
+	if err != nil {
+		return nil, err
+	}
+	if page < 1 {
+		page = 1
+	}
+	offset := (page - 1) * LobbyPageSize
+	rows := make([]protocol.DisplayLobbyGroup, 0)
+	if err := d.DB.Select(&rows, getLobbyGroupsSQL, siteBid, LobbyPageSize, offset); err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
+func GetMyGroupsPaged(userID int64, siteBid string, page int32) ([]protocol.DisplayUserGroup, error) {
+	d, err := db.GetDBConn()
+	if err != nil {
+		return nil, err
+	}
+	if page < 1 {
+		page = 1
+	}
+	offset := (page - 1) * MyGroupPageSize
+	rows := make([]protocol.DisplayUserGroup, 0)
+	if err := d.DB.Select(&rows, getMyGroupsPagedSQL, userID, siteBid, MyGroupPageSize, offset); err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
+func GetMyGroups(userID int64, siteBid string) ([]protocol.DisplayUserGroup, error) {
 	d, err := db.GetDBConn()
 	if err != nil {
 		return nil, err
 	}
 
 	rows := make([]protocol.DisplayUserGroup, 0)
-	if err := d.DB.Select(&rows, getGroupsOfUserSQL, userID, siteBid); err != nil {
+	if err := d.DB.Select(&rows, getMyGroupsSQL, userID, siteBid); err != nil {
 		return nil, err
 	}
 

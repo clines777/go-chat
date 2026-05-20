@@ -4,7 +4,7 @@ type Type string
 
 const (
 	Login            Type = "login"
-	LoginOk          Type = "login_ok"
+	LoginOK          Type = "login_ok"
 	Ping             Type = "ping"
 	Pong             Type = "pong"
 	EnterGroup       Type = "enter_group"
