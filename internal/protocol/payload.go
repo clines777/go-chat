@@ -64,19 +64,48 @@ type EnterMyGroupResp struct {
 	Groups []DisplayUserGroup `json:"groups"`
 }
 
+type SendChatReq struct {
+	GroupId int32  `json:"group_id"`
+	Content string `json:"content"`
+}
+
+type SendChatResp struct {
+	Id         int64 `json:"id"`
+	GroupId    int32 `json:"group_id"`
+	CreateTime int64 `json:"create_time"`
+}
+
+type CastChatEvent struct {
+	Id         int64  `json:"id"`
+	GroupId    int32  `json:"group_id"`
+	UserId     int64  `json:"user_id"`
+	Username   string `json:"username"`
+	Content    string `json:"content"`
+	CreateTime int64  `json:"create_time"`
+}
+
 type EnterGroupReq struct {
 	GroupId int32 `json:"group_id" validate:"required"`
 }
 
+type ChatInfo struct {
+	ID         int64  `db:"id"`
+	Username   string `db:"username"`
+	Content    string `db:"content"`
+	CreateTime int64  `db:"create_time"`
+}
+
 type EnterGroupResp struct {
-	Title          string `json:"title" json:"title"`
-	GroupId        int32  `json:"group_id" json:"group_id"`
-	GroupUserCount int32  `json:"group_user_count" json:"group_user_count"`
+	Title          string     `json:"title" json:"title"`
+	GroupId        int32      `json:"group_id" json:"group_id"`
+	GroupUserCount int32      `json:"group_user_count" json:"group_user_count"`
+	Chats          []ChatInfo `json:"chats" json:"chats"`
 }
 
 type UserSelfResp struct {
 	Id         int64  `json:"id"`
 	Username   string `json:"username"`
+	Nickname   string `json:"nickname"`
 	CreateTime int64  `json:"create_time"`
 	Code       string `json:"code"`
 	UserLevel  int32  `json:"user_level"`

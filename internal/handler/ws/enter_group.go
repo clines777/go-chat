@@ -4,11 +4,14 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"gochat/internal/chat"
 	"gochat/internal/group"
 	"gochat/internal/protocol"
 	"gochat/internal/session"
 	"gochat/internal/ws"
 )
+
+const RecentChatCount = 30
 
 func EnterGroup(ctx *ws.Ctx) *protocol.Payload {
 	var req protocol.EnterGroupReq
@@ -42,9 +45,16 @@ func EnterGroup(ctx *ws.Ctx) *protocol.Payload {
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
 	}
 
-	sess.InGroupId = req.GroupId
+	ws.JoinGroup(ctx.Client.ConnID, req.GroupId, ctx.Client)
+
+	sess.InGroupID = req.GroupId
 	sess.Scene = protocol.SceneInGroup
 	if err := session.Set(ctx.Client.ConnID, sess); err != nil {
+		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
+	}
+
+	chats, err := chat.GetRecentChats(req.GroupId, RecentChatCount)
+	if err != nil {
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
 	}
 
@@ -52,6 +62,7 @@ func EnterGroup(ctx *ws.Ctx) *protocol.Payload {
 		Title:          g.Title,
 		GroupId:        req.GroupId,
 		GroupUserCount: int32(count),
+		Chats:          chats,
 	})
 	if err != nil {
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)

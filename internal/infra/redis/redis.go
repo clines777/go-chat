@@ -60,7 +60,7 @@ func GetRedisWithContext(ctx context.Context) *Client {
 // Ping test Conn on startup
 func (c *Client) Ping() error {
 	if c == nil || c.Conn == nil {
-		return fmt.Errorf("redis client is nil")
+		return fmt.Errorf("redis ws is nil")
 	}
 	return c.Conn.Ping(c.ctx).Err()
 }

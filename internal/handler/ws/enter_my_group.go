@@ -23,8 +23,10 @@ func EnterMyGroup(ctx *ws.Ctx) *protocol.Payload {
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
 	}
 
+	ws.LeaveAllGroups(ctx.Client.ConnID)
+
 	sess.Scene = protocol.SceneMyGroup
-	sess.InGroupId = 0
+	sess.InGroupID = 0
 	if err := session.Set(ctx.Client.ConnID, sess); err != nil {
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
 	}

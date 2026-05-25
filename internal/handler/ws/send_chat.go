@@ -1,10 +1,68 @@
 package handler
 
 import (
+	"database/sql"
+	"encoding/json"
+	"errors"
+	"log"
+
+	"gochat/internal/chat"
+	"gochat/internal/group"
 	"gochat/internal/protocol"
+	"gochat/internal/session"
 	"gochat/internal/ws"
 )
 
 func SendChat(ctx *ws.Ctx) *protocol.Payload {
-	return nil
+	var req protocol.SendChatReq
+	if err := json.Unmarshal(ctx.Payload.Data, &req); err != nil || req.GroupId == 0 || req.Content == "" {
+		return protocol.NewErrPayload(protocol.ErrInvalidParam, "invalid request", ctx.Payload)
+	}
+
+	sess := session.Get(ctx.Client.ConnID)
+	if sess.Scene != protocol.SceneInGroup || sess.InGroupID != req.GroupId {
+		return protocol.NewErrPayload(protocol.ErrInvalidParam, "not in group", ctx.Payload)
+	}
+
+	g, err := group.FindByID(int64(req.GroupId))
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return protocol.NewErrPayload(protocol.ErrorNotFound, "group not found", ctx.Payload)
+		}
+		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
+	}
+	if g.IsDismiss {
+		return protocol.NewErrPayload(protocol.ErrInvalidParam, "group is dismissed", ctx.Payload)
+	}
+	if g.SpeakUserLevel > 0 && int(sess.UserLevel) < g.SpeakUserLevel {
+		return protocol.NewErrPayload(protocol.ErrUnauthorized, "insufficient level", ctx.Payload)
+	}
+
+	record, err := chat.SaveRecord(sess.SiteBid, req.GroupId, sess.UserID, req.Content)
+	if err != nil {
+		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
+	}
+
+	event := &protocol.CastChatEvent{
+		Id:         record.ID,
+		GroupId:    req.GroupId,
+		UserId:     sess.UserID,
+		Username:   sess.Username,
+		Content:    req.Content,
+		CreateTime: record.CreateTime,
+	}
+	if err := chat.Publish(event); err != nil {
+		log.Printf("[SendChat] publish error: %v", err)
+	}
+
+	respData, err := json.Marshal(&protocol.SendChatResp{
+		Id:         record.ID,
+		GroupId:    req.GroupId,
+		CreateTime: record.CreateTime,
+	})
+	if err != nil {
+		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
+	}
+
+	return &protocol.Payload{MsgType: protocol.SendChatOk, Data: respData, Meta: ctx.Payload.Meta}
 }
