@@ -12,16 +12,24 @@ import (
 	"gochat/internal/user"
 )
 
-func GetAvatars(c *gin.Context) {
-	empty := make([]model.Avatar, 0)
+type avatarResp struct {
+	ID  int64  `json:"id"`
+	URL string `json:"url"`
+}
 
+func GetAvatars(c *gin.Context) {
 	avatars, err := getAvatarList()
 	if err != nil {
-		c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorUnknown, "系統錯誤", empty).H())
+		c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorUnknown, "系統錯誤", []avatarResp{}).H())
 		return
 	}
 
-	c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorNone, "OK", avatars).H())
+	resp := make([]avatarResp, len(avatars))
+	for i, a := range avatars {
+		resp[i] = avatarResp{ID: a.ID, URL: "/static/avatars/" + a.Filename}
+	}
+
+	c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorNone, "OK", resp).H())
 }
 
 func SetAvatar(c *gin.Context) {
