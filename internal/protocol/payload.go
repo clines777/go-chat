@@ -81,6 +81,7 @@ type CastChatEvent struct {
 	GroupId    int32  `json:"group_id"`
 	UserId     int64  `json:"user_id"`
 	Username   string `json:"username"`
+	AvatarURL  string `json:"avatar_url"`
 	Content    string `json:"content"`
 	CreateTime int64  `json:"create_time"`
 }
@@ -98,10 +99,10 @@ type ChatInfo struct {
 }
 
 type EnterGroupResp struct {
-	Title          string     `json:"title" json:"title"`
-	GroupId        int32      `json:"group_id" json:"group_id"`
-	GroupUserCount int32      `json:"group_user_count" json:"group_user_count"`
-	Chats          []ChatInfo `json:"chats" json:"chats"`
+	Title          string     `json:"title"`
+	GroupId        int32      `json:"group_id"`
+	GroupUserCount int32      `json:"group_user_count"`
+	Chats          []ChatInfo `json:"chats"`
 }
 
 type UserSelfResp struct {

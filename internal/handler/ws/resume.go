@@ -23,12 +23,18 @@ func Resume(ctx *ws.Ctx) *protocol.Payload {
 		return protocol.NewErrPayload(protocol.ErrUnauthorized, "invalid or expired token", ctx.Payload)
 	}
 
+	u, err := user.FindByID(tokenPayload.UserID)
+	if err != nil {
+		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
+	}
+
 	sess := &session.Session{
-		ConnID:   ctx.Client.ConnID,
-		UserID:   tokenPayload.UserID,
-		SiteBid:  tokenPayload.SiteBid,
-		Username: tokenPayload.Username,
-		Scene:    protocol.SceneMyGroup,
+		ConnID:    ctx.Client.ConnID,
+		UserID:    tokenPayload.UserID,
+		SiteBid:   tokenPayload.SiteBid,
+		Username:  tokenPayload.Username,
+		UserLevel: u.UserLevel,
+		Scene:     protocol.SceneMyGroup,
 	}
 	if err := session.Set(ctx.Client.ConnID, sess); err != nil {
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)

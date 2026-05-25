@@ -10,6 +10,7 @@ import (
 	"gochat/internal/group"
 	"gochat/internal/protocol"
 	"gochat/internal/session"
+	"gochat/internal/user"
 	"gochat/internal/ws"
 )
 
@@ -43,11 +44,17 @@ func SendChat(ctx *ws.Ctx) *protocol.Payload {
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
 	}
 
+	avatarURL := ""
+	if u, err := user.FindByID(sess.UserID); err == nil && u.AvatarFilename != "" {
+		avatarURL = "/static/avatars/" + u.AvatarFilename
+	}
+
 	event := &protocol.CastChatEvent{
 		Id:         record.ID,
 		GroupId:    req.GroupId,
 		UserId:     sess.UserID,
 		Username:   sess.Username,
+		AvatarURL:  avatarURL,
 		Content:    req.Content,
 		CreateTime: record.CreateTime,
 	}

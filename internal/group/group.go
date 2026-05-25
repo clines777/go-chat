@@ -215,7 +215,7 @@ func Join(u *model.User, g *model.ChatGroup) error {
 const getMyGroupsSQL = `
 SELECT cg.id, cg.title, cg.code, cg.open_join, cg.join_user_level,
        COALESCE(lr.content, '') AS last_msg,
-       COALESCE(EXTRACT(EPOCH FROM lr.create_time)::bigint, 0) AS last_msg_time
+       COALESCE(lr.create_time, 0) AS last_msg_time
 FROM chat_group cg
 JOIN group_user gu ON gu.group_id = cg.id
     AND gu.user_id = $1
@@ -227,7 +227,8 @@ LEFT JOIN LATERAL (
     ORDER BY id DESC LIMIT 1
 ) lr ON true
 WHERE cg.site_bid = $2
-  AND cg.is_dismiss = false`
+  AND cg.is_dismiss = false
+ORDER BY last_msg_time DESC, cg.id ASC`
 
 const getLobbyGroupsSQL = `
 SELECT cg.id, cg.title, COALESCE(gu_count.cnt, 0)::int AS member_count

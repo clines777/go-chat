@@ -29,10 +29,16 @@ func EnterSelf(ctx *ws.Ctx) *protocol.Payload {
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
 	}
 
+	avatarURL := ""
+	if u.AvatarFilename != "" {
+		avatarURL = "/static/avatars/" + u.AvatarFilename
+	}
+
 	respData, err := json.Marshal(&protocol.UserSelfResp{
 		Id:         u.ID,
 		Username:   u.ExtUsername,
 		Nickname:   u.Nickname,
+		AvatarURL:  avatarURL,
 		CreateTime: u.CreateTime,
 		Code:       u.Code,
 		UserLevel:  u.UserLevel,

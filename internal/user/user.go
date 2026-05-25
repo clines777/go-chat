@@ -122,9 +122,14 @@ func findUser(siteBid string, username string) (*model.User, error) {
 	}
 
 	findSql, args, _ := d.Builder.
-		Select("id", "site_bid", "ext_member_id", "ext_username", "code", "user_level", "is_suspended", "avatar_id").
-		From(`"user"`).
-		Where(sq.Eq{"site_bid": siteBid, "ext_username": username}).
+		Select(
+			"u.id", "u.site_bid", "u.ext_member_id", "u.ext_username", "u.code",
+			"u.user_level", "u.is_suspended", "u.avatar_id",
+			"COALESCE(av.filename, '') AS avatar_filename",
+		).
+		From(`"user" u`).
+		LeftJoin("avatar av ON av.id = u.avatar_id").
+		Where(sq.Eq{"u.site_bid": siteBid, "u.ext_username": username}).
 		Limit(1).ToSql()
 
 	var u model.User
@@ -190,7 +195,7 @@ func createUser(tokenInfo *protocol.GetTokenReq, userCode string) (*model.User, 
 
 	now := time.Now()
 	insertSql, insertArgs, _ := d.Builder.
-		Insert("member").
+		Insert(`"user"`).
 		Columns("site_bid", "ext_member_id", "ext_username", "code", "last_login_time", "create_time", "update_time").
 		Values(tokenInfo.SiteBid, tokenInfo.MemberId, tokenInfo.Username, userCode, now, now, now).
 		Suffix("RETURNING *").
@@ -225,7 +230,7 @@ func updateUser(u *model.User) (*model.User, error) {
 
 	now := time.Now().Unix()
 	_, err = d.Builder.
-		Update("member").
+		Update(`"user"`).
 		Set("last_login_time", now).
 		Where(sq.Eq{"id": u.ID}).
 		RunWith(d.DB).
