@@ -90,7 +90,51 @@ func Unregister(connID string) {
 	delete(hub.clients, connID)
 	hub.mu.Unlock()
 
+	LeaveAllGroups(connID)
 	_ = redis.GetRedis().Del(protocol.SessionKey(connID))
+}
+
+// groupSubs tracks which clients are currently viewing each group on this server.
+var groupSubs = struct {
+	byGroup map[int32]map[string]*Client
+	byConn  map[string]int32
+	mu      sync.RWMutex
+}{
+	byGroup: make(map[int32]map[string]*Client),
+	byConn:  make(map[string]int32),
+}
+
+func JoinGroup(connID string, groupID int32, c *Client) {
+	groupSubs.mu.Lock()
+	defer groupSubs.mu.Unlock()
+
+	if oldID, ok := groupSubs.byConn[connID]; ok {
+		delete(groupSubs.byGroup[oldID], connID)
+	}
+	if groupSubs.byGroup[groupID] == nil {
+		groupSubs.byGroup[groupID] = make(map[string]*Client)
+	}
+	groupSubs.byGroup[groupID][connID] = c
+	groupSubs.byConn[connID] = groupID
+}
+
+func LeaveAllGroups(connID string) {
+	groupSubs.mu.Lock()
+	defer groupSubs.mu.Unlock()
+
+	if groupID, ok := groupSubs.byConn[connID]; ok {
+		delete(groupSubs.byGroup[groupID], connID)
+		delete(groupSubs.byConn, connID)
+	}
+}
+
+func BroadcastToGroup(groupID int32, data []byte) {
+	groupSubs.mu.RLock()
+	defer groupSubs.mu.RUnlock()
+
+	for _, c := range groupSubs.byGroup[groupID] {
+		c.TrySend(data)
+	}
 }
 
 func GetClient(connID string) (*Client, bool) {

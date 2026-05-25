@@ -66,7 +66,9 @@ func Login(c *ws.Ctx, tokenInfo *protocol.GetTokenReq) (*model.User, error) {
 		ConnID:    c.Client.ConnID,
 		UserID:    user.ID,
 		SiteBid:   user.SiteBid,
-		InGroupId: 0,
+		Username:  user.ExtUsername,
+		UserLevel: user.UserLevel,
+		InGroupID: 0,
 		Scene:     protocol.SceneMyGroup,
 	}
 
@@ -98,7 +100,7 @@ func findUser(siteBid string, username string) (*model.User, error) {
 	return &u, nil
 }
 
-var userColumns = []string{"id", "site_bid", "ext_member_id", "ext_username", "code", "user_level", "is_suspended", "avatar_id"}
+var userColumns = []string{"id", "site_bid", "ext_member_id", "ext_username", "nickname", "code", "user_level", "is_suspended", "avatar_id", "create_time"}
 
 func FindByID(userID int64) (*model.User, error) {
 	d, err := db.GetDBConn()

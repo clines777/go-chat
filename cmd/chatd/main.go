@@ -2,12 +2,18 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"strconv"
+	"strings"
+
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"gochat/internal/handler/api"
 	_ "gochat/internal/handler/ws"
+	"gochat/internal/infra"
 	"gochat/internal/infra/db"
+	infranats "gochat/internal/infra/nats"
 	"gochat/internal/infra/redis"
 	"gochat/internal/middleware"
 	"gochat/internal/protocol"
@@ -40,6 +46,37 @@ func main() {
 	redisConn := redis.GetRedis()
 	if err := redisConn.Ping(); err != nil {
 		log.Fatalf("redis health check failed: %v", err)
+	}
+
+	natsClient, natsErr := infranats.GetNats()
+	if natsErr != nil {
+		log.Fatalf("nats init failed: %v", natsErr)
+	}
+	if err := natsClient.Ping(); err != nil {
+		log.Fatalf("nats health check failed: %v", err)
+	}
+	if err := natsClient.EnsureStream(); err != nil {
+		log.Fatalf("nats stream setup failed: %v", err)
+	}
+	log.Println("[NATS] check success")
+
+	serverName := infra.GetEnvConfig().ServerName
+	if err := natsClient.SubscribeGroupChat(serverName, func(subject string, data []byte) {
+		parts := strings.Split(subject, ".")
+		if len(parts) != 3 {
+			return
+		}
+		gid, err := strconv.ParseInt(parts[2], 10, 32)
+		if err != nil {
+			return
+		}
+		wsMsg, err := json.Marshal(&protocol.Payload{MsgType: protocol.CastChat, Data: data})
+		if err != nil {
+			return
+		}
+		ws.BroadcastToGroup(int32(gid), wsMsg)
+	}); err != nil {
+		log.Fatalf("nats subscribe failed: %v", err)
 	}
 
 	r := gin.New()

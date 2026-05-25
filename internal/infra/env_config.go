@@ -55,5 +55,6 @@ type EnvConfig struct {
 	DBConnMaxIdleTime time.Duration `env:"DB_CONN_MAX_IDLE" envDefault:"5m"`
 	RedisDialTimeout  time.Duration `env:"REDIS_DIAL_TIMEOUT" envDefault:"5s"`
 
-	ServerName string `envDefault:""`
+	NatsURL    string `env:"NATS_URL" envDefault:"nats://127.0.0.1:4222"`
+	ServerName string `env:"SERVER_NAME" envDefault:"s1"`
 }
