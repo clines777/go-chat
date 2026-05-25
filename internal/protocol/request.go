@@ -37,3 +37,13 @@ type CreateGroupReq struct {
 type SetAvatarReq struct {
 	AvatarId int32 `json:"avatar_id" binding:"required"`
 }
+
+type ResumeReq struct {
+	Token string `json:"token"`
+}
+
+type ResumeTokenPayload struct {
+	UserID   int64  `json:"user_id"`
+	SiteBid  string `json:"site_bid"`
+	Username string `json:"username"`
+}
