@@ -10,7 +10,8 @@ type User struct {
 	AvatarID      int32  `db:"avatar_id" json:"avatar_id"`
 	UserLevel     int32  `db:"user_level" json:"user_level"`
 	IsSuspended   bool   `db:"is_suspended" json:"is_suspended"`
-	Code          string `db:"code" json:"code"`
-	CreateTime    int64  `db:"create_time" json:"create_time"`
-	UpdateTime    int64  `db:"update_time" json:"update_time"`
+	Code           string `db:"code" json:"code"`
+	CreateTime     int64  `db:"create_time" json:"create_time"`
+	UpdateTime     int64  `db:"update_time" json:"update_time"`
+	AvatarFilename string `db:"avatar_filename" json:"-"`
 }

@@ -23,9 +23,15 @@ func GetUserSelfInfo(c *gin.Context) {
 		return
 	}
 
+	avatarURL := ""
+	if u.AvatarFilename != "" {
+		avatarURL = "/static/avatars/" + u.AvatarFilename
+	}
+
 	c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorNone, "OK", &protocol.UserSelfResp{
 		Id:         u.ID,
 		Username:   u.ExtUsername,
+		AvatarURL:  avatarURL,
 		CreateTime: u.CreateTime,
 		Code:       u.Code,
 		UserLevel:  u.UserLevel,

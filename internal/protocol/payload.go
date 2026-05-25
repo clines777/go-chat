@@ -92,6 +92,7 @@ type EnterGroupReq struct {
 type ChatInfo struct {
 	ID         int64  `db:"id"`
 	Username   string `db:"username"`
+	AvatarURL  string `db:"avatar_url" json:"avatar_url"`
 	Content    string `db:"content"`
 	CreateTime int64  `db:"create_time"`
 }
@@ -107,6 +108,7 @@ type UserSelfResp struct {
 	Id         int64  `json:"id"`
 	Username   string `json:"username"`
 	Nickname   string `json:"nickname"`
+	AvatarURL  string `json:"avatar_url"`
 	CreateTime int64  `json:"create_time"`
 	Code       string `json:"code"`
 	UserLevel  int32  `json:"user_level"`

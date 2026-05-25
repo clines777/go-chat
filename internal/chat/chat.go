@@ -53,9 +53,14 @@ func GetRecentChats(groupID int32, limit int32) ([]protocol.ChatInfo, error) {
 	}
 
 	sub := d.Builder.
-		Select("cr.id", "u.ext_username AS username", "cr.content", "cr.create_time").
+		Select(
+			"cr.id", "u.ext_username AS username",
+			"COALESCE('/static/avatars/' || av.filename, '') AS avatar_url",
+			"cr.content", "cr.create_time",
+		).
 		From("chat_record cr").
 		Join(`"user" u ON u.id = cr.user_id`).
+		LeftJoin("avatar av ON av.id = u.avatar_id").
 		Where(sq.Eq{"cr.group_id": groupID, "cr.deleted": false}).
 		OrderBy("cr.create_time DESC").
 		Limit(uint64(limit))

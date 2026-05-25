@@ -144,9 +144,14 @@ func FindByID(userID int64) (*model.User, error) {
 	}
 
 	findSql, args, _ := d.Builder.
-		Select(userColumns...).
-		From(`"user"`).
-		Where(sq.Eq{"id": userID}).
+		Select(
+			"u.id", "u.site_bid", "u.ext_member_id", "u.ext_username", "u.nickname",
+			"u.code", "u.user_level", "u.is_suspended", "u.avatar_id", "u.create_time",
+			"COALESCE(av.filename, '') AS avatar_filename",
+		).
+		From(`"user" u`).
+		LeftJoin("avatar av ON av.id = u.avatar_id").
+		Where(sq.Eq{"u.id": userID}).
 		Limit(1).ToSql()
 
 	var m model.User
