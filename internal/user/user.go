@@ -16,6 +16,41 @@ import (
 	"time"
 )
 
+const resumeTokenTTL = 7 * 24 * time.Hour
+
+func GenerateResumeToken(u *model.User) (string, error) {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	token := hex.EncodeToString(b)
+	payload := protocol.ResumeTokenPayload{
+		UserID:   u.ID,
+		SiteBid:  u.SiteBid,
+		Username: u.ExtUsername,
+	}
+	if err := redis.GetRedis().SetJSON(protocol.ResumeTokenKey(token), payload, resumeTokenTTL); err != nil {
+		return "", err
+	}
+	return token, nil
+}
+
+func GetResumeToken(token string) (*protocol.ResumeTokenPayload, error) {
+	var payload protocol.ResumeTokenPayload
+	ok, err := redis.GetRedis().GetJSON(protocol.ResumeTokenKey(token), &payload)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, nil
+	}
+	return &payload, nil
+}
+
+func RefreshResumeToken(token string) {
+	_ = redis.GetRedis().Expire(protocol.ResumeTokenKey(token), resumeTokenTTL)
+}
+
 func GenerateApiToken(userID int64, siteBid string) (string, error) {
 	b := make([]byte, 16)
 	if _, err := rand.Read(b); err != nil {

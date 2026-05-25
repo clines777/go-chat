@@ -24,10 +24,11 @@ type LoginReq struct {
 }
 
 type LoginResp struct {
-	UserID     int64              `json:"user_id"`
-	Username   string             `json:"username"`
-	ApiToken   string             `json:"api_token"`
-	UserGroups []DisplayUserGroup `json:"user_groups"`
+	UserID      int64              `json:"user_id"`
+	Username    string             `json:"username"`
+	ApiToken    string             `json:"api_token"`
+	ResumeToken string             `json:"resume_token"`
+	UserGroups  []DisplayUserGroup `json:"user_groups"`
 }
 
 type DisplayUserGroup struct {

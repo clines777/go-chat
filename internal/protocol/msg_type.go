@@ -48,4 +48,5 @@ const (
 	GetChatHistoryOk Type = "get_chat_history_ok"
 	UserQuitCast     Type = "user_quit_cast"
 	Resume           Type = "resume"
+	ResumeOK         Type = "resume_ok"
 )

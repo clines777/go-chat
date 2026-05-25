@@ -36,11 +36,17 @@ func Login(ctx *ws.Ctx) *protocol.Payload {
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
 	}
 
+	resumeToken, err := user.GenerateResumeToken(u)
+	if err != nil {
+		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
+	}
+
 	respData, err := json.Marshal(&protocol.LoginResp{
-		UserID:     u.ID,
-		Username:   u.ExtUsername,
-		ApiToken:   apiToken,
-		UserGroups: userGroups,
+		UserID:      u.ID,
+		Username:    u.ExtUsername,
+		ApiToken:    apiToken,
+		ResumeToken: resumeToken,
+		UserGroups:  userGroups,
 	})
 	if err != nil {
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
