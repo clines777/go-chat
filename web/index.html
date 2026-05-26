@@ -444,6 +444,16 @@
     }
     .msg-user { font-size: 14px; font-weight: 700; color: var(--accent2); }
     .msg-time { font-size: 11px; color: var(--muted); }
+    .msg-owner-badge {
+      font-size: 10px; font-weight: 700;
+      color: #1e1e2e;
+      background: #f9e2af;
+      border-radius: 3px;
+      padding: 1px 5px;
+      letter-spacing: .3px;
+      line-height: 1.6;
+      align-self: center;
+    }
     .msg-text { font-size: 14px; color: var(--text); line-height: 1.55; word-break: break-word; }
 
     /* Input area */
@@ -739,6 +749,7 @@
             <div class="msg-body">
               <div class="msg-head">
                 <span class="msg-user">{{ m.username }}</span>
+                <span v-if="m.userId === groupInfo.ownerUserId && groupInfo.ownerUserId" class="msg-owner-badge">群主</span>
                 <span class="msg-time">{{ formatTime(m.createTime) }}</span>
               </div>
               <div class="msg-text">{{ m.content }}</div>
@@ -882,7 +893,7 @@ createApp({
     const showCreateGroup  = ref(false);
     const createGroupForm  = reactive({ title: '', code: '', userLimit: 0, bulletin: '', openJoin: false });
 
-    const groupInfo = reactive({ title: '', userTotal: null, bulletin: '', ownerUsername: '', code: '', remark: '' });
+    const groupInfo = reactive({ title: '', userTotal: null, bulletin: '', ownerUsername: '', ownerUserId: 0, code: '', remark: '' });
 
     let wsConn = null;
 
@@ -928,6 +939,7 @@ createApp({
     function normalizeHistory(m) {
       return {
         id:         m.ID,
+        userId:     m.UserID,
         username:   m.Username,
         avatarUrl:  m.avatar_url || '',
         content:    m.Content,
@@ -939,6 +951,7 @@ createApp({
     function normalizeLive(m) {
       return {
         id:         m.id,
+        userId:     m.user_id,
         username:   m.username,
         avatarUrl:  m.avatar_url || '',
         content:    m.content,
@@ -1066,7 +1079,7 @@ createApp({
     function enterGroup(groupId) {
       currentGroup.chats = [];
       groupInfo.title = ''; groupInfo.userTotal = null; groupInfo.bulletin = '';
-      groupInfo.ownerUsername = ''; groupInfo.code = ''; groupInfo.remark = '';
+      groupInfo.ownerUsername = ''; groupInfo.ownerUserId = 0; groupInfo.code = ''; groupInfo.remark = '';
       wsSend('enter_group', { group_id: groupId });
       loadGroupInfo(groupId);
     }
@@ -1083,6 +1096,7 @@ createApp({
           groupInfo.userTotal     = d.user_total     ?? null;
           groupInfo.bulletin      = d.bulletin       || '';
           groupInfo.ownerUsername = d.owner_username || '';
+          groupInfo.ownerUserId   = d.owner_user_id  || 0;
           groupInfo.code          = d.code           || '';
           groupInfo.remark        = d.remark         || '';
         }

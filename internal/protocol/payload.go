@@ -92,6 +92,7 @@ type EnterGroupReq struct {
 
 type ChatInfo struct {
 	ID         int64  `db:"id"`
+	UserID     int64  `db:"user_id"`
 	Username   string `db:"username"`
 	AvatarURL  string `db:"avatar_url" json:"avatar_url"`
 	Content    string `db:"content"`
@@ -119,6 +120,7 @@ type GroupInfoResp struct {
 	UserTotal     int32  `json:"user_total"`
 	Bulletin      string `json:"bulletin"`
 	OwnerUsername string `json:"owner_username"`
+	OwnerUserID   int64  `json:"owner_user_id"`
 	Code          string `json:"code"`
 	Remark        string `json:"remark"`
 }

@@ -43,6 +43,7 @@ func GetGroupInfo(c *gin.Context) {
 		UserTotal:     int32(count),
 		Bulletin:      g.Bulletin,
 		OwnerUsername: g.OwnerUserName,
+		OwnerUserID:   int64(g.OwnerUserID),
 		Code:          g.Code,
 		Remark:        g.Remark,
 	}).H())
