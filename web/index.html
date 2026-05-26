@@ -176,6 +176,7 @@
     /* Tabs */
     .tab-bar {
       display: flex;
+      align-items: center;
       padding: 14px 10px 0;
       gap: 4px;
     }
@@ -193,6 +194,38 @@
     }
     .tab-btn:hover { color: var(--text); }
     .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .create-group-btn {
+      background: none; border: none;
+      color: var(--subtext); cursor: pointer;
+      font-size: 18px; padding: 2px 4px 10px;
+      line-height: 1; border-bottom: 2px solid transparent;
+      transition: color .15s;
+    }
+    .create-group-btn:hover { color: var(--accent); }
+
+    /* Create group form */
+    .cg-field { margin-bottom: 16px; }
+    .cg-field label { display: block; font-size: 12px; font-weight: 600; color: var(--subtext); margin-bottom: 6px; }
+    .cg-field input[type=text], .cg-field input[type=number], .cg-field textarea {
+      width: 100%; box-sizing: border-box;
+      background: var(--bg-s0); border: 1px solid var(--bg-s1);
+      border-radius: 8px; color: var(--text); font-size: 14px;
+      padding: 9px 12px; outline: none; transition: border-color .15s;
+      font-family: inherit;
+    }
+    .cg-field input:focus, .cg-field textarea:focus { border-color: var(--accent); }
+    .cg-field input::placeholder, .cg-field textarea::placeholder { color: var(--muted); }
+    .cg-field textarea { resize: vertical; min-height: 70px; }
+    .cg-checkbox { display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; font-size: 14px; }
+    .cg-checkbox input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+    .modal-submit {
+      width: 100%; background: var(--accent); border: none;
+      border-radius: 9px; color: var(--bg-crust); font-size: 14px;
+      font-weight: 700; padding: 11px; cursor: pointer;
+      transition: opacity .15s; margin-bottom: 10px;
+    }
+    .modal-submit:hover:not(:disabled) { opacity: .88; }
+    .modal-submit:disabled { opacity: .4; cursor: default; }
 
     /* Group list */
     .group-list {
@@ -269,6 +302,62 @@
       flex-direction: column;
       min-width: 0;
       background: var(--bg-base);
+    }
+
+    /* ── Info panel ── */
+    .info-panel {
+      width: 240px;
+      min-width: 240px;
+      background: var(--bg-sidebar);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 20px 16px;
+      gap: 0;
+    }
+    .ip-title {
+      font-size: 15px; font-weight: 800;
+      color: var(--text);
+      margin-bottom: 4px;
+      word-break: break-word;
+    }
+    .ip-count {
+      font-size: 12px; color: var(--subtext);
+      margin-bottom: 20px;
+    }
+    .ip-section {
+      margin-bottom: 18px;
+    }
+    .ip-label {
+      font-size: 10px; font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase; letter-spacing: .8px;
+      margin-bottom: 6px;
+    }
+    .ip-value {
+      font-size: 13px; color: var(--text);
+      line-height: 1.5;
+      word-break: break-word;
+    }
+    .ip-value.muted { color: var(--muted); font-style: italic; }
+    .ip-code {
+      font-family: monospace;
+      font-size: 13px;
+      background: var(--bg-s0);
+      border: 1px solid var(--bg-s1);
+      border-radius: 6px;
+      padding: 5px 10px;
+      color: var(--accent2);
+      cursor: pointer;
+      display: inline-block;
+      transition: border-color .15s;
+    }
+    .ip-code:hover { border-color: var(--accent2); }
+    .ip-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 4px 0 18px;
     }
 
     .welcome-screen {
@@ -575,6 +664,7 @@
       <div class="tab-bar">
         <button class="tab-btn" :class="{active: tab === 'lobby'}"    @click="switchTab('lobby')">大廳</button>
         <button class="tab-btn" :class="{active: tab === 'mygroups'}" @click="switchTab('mygroups')">我的群組</button>
+        <button class="create-group-btn" title="建立群組" @click="openCreateGroup">＋</button>
       </div>
 
       <div class="group-list">
@@ -678,6 +768,33 @@
         </div>
       </div>
     </main>
+
+    <!-- Info Panel -->
+    <aside v-if="currentGroupId" class="info-panel">
+      <div class="ip-title"># {{ groupInfo.title || currentGroup.title }}</div>
+      <div class="ip-count">{{ groupInfo.userTotal ?? currentGroup.memberCount }} 位成員</div>
+      <div class="ip-divider"></div>
+
+      <div class="ip-section" v-if="groupInfo.bulletin">
+        <div class="ip-label">公告</div>
+        <div class="ip-value">{{ groupInfo.bulletin }}</div>
+      </div>
+
+      <div class="ip-section">
+        <div class="ip-label">擁有者</div>
+        <div class="ip-value">{{ groupInfo.ownerUsername || '—' }}</div>
+      </div>
+
+      <div class="ip-section" v-if="groupInfo.code">
+        <div class="ip-label">邀請碼</div>
+        <div class="ip-code" @click="copyCode" title="點擊複製">{{ groupInfo.code }}</div>
+      </div>
+
+      <div class="ip-section" v-if="groupInfo.remark">
+        <div class="ip-label">備註</div>
+        <div class="ip-value">{{ groupInfo.remark }}</div>
+      </div>
+    </aside>
   </div>
 
   <!-- ── Profile Modal ── -->
@@ -715,6 +832,40 @@
     </div>
   </div>
 
+  <!-- ── Create Group Modal ── -->
+  <div v-if="showCreateGroup" class="modal-overlay" @click.self="showCreateGroup = false">
+    <div class="modal">
+      <h3>建立群組</h3>
+      <div class="modal-sub">建立一個新的聊天群組</div>
+
+      <div class="cg-field">
+        <label>群組名稱 *</label>
+        <input type="text" v-model="createGroupForm.title" placeholder="輸入群組名稱" maxlength="30" />
+      </div>
+      <div class="cg-field">
+        <label>邀請碼（選填，留空自動生成）</label>
+        <input type="text" v-model="createGroupForm.code" placeholder="自訂邀請碼" maxlength="20" />
+      </div>
+      <div class="cg-field">
+        <label>人數上限（0 = 不限）</label>
+        <input type="number" v-model.number="createGroupForm.userLimit" min="0" placeholder="0" />
+      </div>
+      <div class="cg-field">
+        <label>公告（選填）</label>
+        <textarea v-model="createGroupForm.bulletin" placeholder="群組公告內容…"></textarea>
+      </div>
+      <div class="cg-field">
+        <label class="cg-checkbox">
+          <input type="checkbox" v-model="createGroupForm.openJoin" />
+          開放任何人自由加入
+        </label>
+      </div>
+
+      <button class="modal-submit" @click="submitCreateGroup" :disabled="!createGroupForm.title.trim()">建立群組</button>
+      <button class="modal-close" @click="showCreateGroup = false">取消</button>
+    </div>
+  </div>
+
   <!-- ── Toast ── -->
   <div v-if="toast" class="toast">{{ toast }}</div>
 
@@ -736,6 +887,11 @@ createApp({
     const user = reactive({
       id: 0, username: '', apiToken: '', resumeToken: '', avatarUrl: '',
     });
+
+    const showCreateGroup  = ref(false);
+    const createGroupForm  = reactive({ title: '', code: '', userLimit: 0, bulletin: '', openJoin: false });
+
+    const groupInfo = reactive({ title: '', userTotal: null, bulletin: '', ownerUsername: '', code: '', remark: '' });
 
     let wsConn = null;
 
@@ -816,8 +972,8 @@ createApp({
           user.resumeToken = data.resume_token;
           myGroups.value   = data.user_groups || [];
           connecting.value = false;
+          tab.value        = 'mygroups';
           view.value       = 'chat';
-          wsSend('enter_my_group', { page: 1 });
           break;
 
         case 'enter_lobby_ok':
@@ -909,7 +1065,8 @@ createApp({
     // ── Navigation ──
 
     function switchTab(newTab) {
-      tab.value = newTab;
+      tab.value            = newTab;
+      currentGroupId.value = null;
       if (newTab === 'lobby') {
         wsSend('enter_lobby', { page: 1 });
       } else {
@@ -919,7 +1076,38 @@ createApp({
 
     function enterGroup(groupId) {
       currentGroup.chats = [];
+      groupInfo.title = ''; groupInfo.userTotal = null; groupInfo.bulletin = '';
+      groupInfo.ownerUsername = ''; groupInfo.code = ''; groupInfo.remark = '';
       wsSend('enter_group', { group_id: groupId });
+      loadGroupInfo(groupId);
+    }
+
+    async function loadGroupInfo(groupId) {
+      try {
+        const res  = await fetch(`/api/group/info?group_id=${groupId}`, {
+          headers: { Authorization: `Bearer ${user.apiToken}` },
+        });
+        const json = await res.json();
+        if (json.code === 0 && json.data) {
+          const d = json.data;
+          groupInfo.title         = d.title         || '';
+          groupInfo.userTotal     = d.user_total     ?? null;
+          groupInfo.bulletin      = d.bulletin       || '';
+          groupInfo.ownerUsername = d.owner_username || '';
+          groupInfo.code          = d.code           || '';
+          groupInfo.remark        = d.remark         || '';
+        }
+      } catch {}
+    }
+
+    async function copyCode() {
+      if (!groupInfo.code) return;
+      try {
+        await navigator.clipboard.writeText(groupInfo.code);
+        showToast('邀請碼已複製 ✓');
+      } catch {
+        showToast(groupInfo.code);
+      }
     }
 
     // ── Chat ──
@@ -979,6 +1167,49 @@ createApp({
       }
     }
 
+    // ── Create group ──
+
+    function openCreateGroup() {
+      createGroupForm.title     = '';
+      createGroupForm.code      = '';
+      createGroupForm.userLimit = 0;
+      createGroupForm.bulletin  = '';
+      createGroupForm.openJoin  = false;
+      showCreateGroup.value     = true;
+    }
+
+    async function submitCreateGroup() {
+      if (!createGroupForm.title.trim()) return;
+      try {
+        const res  = await fetch('/api/group/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type':  'application/json',
+            Authorization: `Bearer ${user.apiToken}`,
+          },
+          body: JSON.stringify({
+            title:      createGroupForm.title.trim(),
+            code:       createGroupForm.code.trim() || undefined,
+            user_limit: createGroupForm.userLimit || 0,
+            bulletin:   createGroupForm.bulletin.trim(),
+            open_join:  createGroupForm.openJoin,
+          }),
+        });
+        const json = await res.json();
+        if (json.code === 0) {
+          showCreateGroup.value = false;
+          showToast('群組建立成功 ✓');
+          wsSend('enter_my_group', { page: 1 });
+          tab.value = 'mygroups';
+          if (json.data?.group_id) enterGroup(json.data.group_id);
+        } else {
+          showToast(json.msg || '建立失敗');
+        }
+      } catch {
+        showToast('建立群組失敗');
+      }
+    }
+
     // ── Join group ──
 
     async function joinGroup(groupId) {
@@ -1008,8 +1239,12 @@ createApp({
       user, tab, currentGroupId, showProfile, avatarList,
       lobbyGroups, myGroups, myGroupIds, currentGroup,
       chatInput, msgsRef,
+      showCreateGroup, createGroupForm,
+      groupInfo,
       doLogin, switchTab, enterGroup, sendChat, formatTime,
       openProfile, setAvatar, joinGroup,
+      openCreateGroup, submitCreateGroup,
+      copyCode,
     };
   },
 }).mount('#app');

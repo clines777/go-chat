@@ -14,12 +14,8 @@ type ChatGroup struct {
 	PinChatID             int64  `db:"pin_chat_id" json:"pin_chat_id"`
 	SpeakUserLevel        int    `db:"speak_user_level" json:"speak_user_level"`
 	JoinUserLevel         int32  `db:"join_user_level" json:"join_user_level"`
-	OwnerExtMemberID      int    `db:"owner_ext_member_id" json:"owner_ext_member_id"`
 	OwnerExtUsername      string `db:"owner_ext_username" json:"owner_ext_username"`
 	OwnerUserID           int    `db:"owner_user_id" json:"owner_user_id"`
-	ModExtMemberIDs       string `db:"mod_ext_member_ids" json:"mod_ext_member_ids"`
-	ModExtUsernames       string `db:"mod_ext_usernames" json:"mod_ext_usernames"`
-	ModUserIDs            string `db:"mod_user_ids" json:"mod_user_ids"`
 	Title                 string `db:"title" json:"title"`
 	Remark                string `db:"remark" json:"remark"`
 	CreateTime            int64  `db:"create_time" json:"create_time"`

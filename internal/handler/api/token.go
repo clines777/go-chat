@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -30,6 +31,7 @@ func GetLoginToken(c *gin.Context) {
 
 	token := genLoginToken(&req)
 	if err := redis.GetRedis().SetJSON(protocol.LoginTokenKey(token), req, 10*time.Second); err != nil {
+		log.Printf("[GetLoginToken] SetJSON site=%s user=%s error: %v", req.SiteBid, req.Username, err)
 		c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorUnknown, "系統錯誤", nil).H())
 		return
 	}

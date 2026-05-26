@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 	"errors"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -24,6 +25,7 @@ func GetGroupInfo(c *gin.Context) {
 		if errors.Is(err, sql.ErrNoRows) {
 			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorNotFound, "群組不存在", nil).H())
 		} else {
+			log.Printf("[GetGroupInfo] FindByID group=%d error: %v", req.GroupID, err)
 			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorUnknown, "系統錯誤", nil).H())
 		}
 		return
@@ -31,6 +33,7 @@ func GetGroupInfo(c *gin.Context) {
 
 	count, err := group.GetMemberCount(g.ID)
 	if err != nil {
+		log.Printf("[GetGroupInfo] GetMemberCount group=%d error: %v", g.ID, err)
 		c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorUnknown, "系統錯誤", nil).H())
 		return
 	}
@@ -60,6 +63,7 @@ func JoinGroup(c *gin.Context) {
 		if errors.Is(err, sql.ErrNoRows) {
 			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrUserNotFound, "用戶不存在", nil).H())
 		} else {
+			log.Printf("[JoinGroup] FindByID user=%d error: %v", userID, err)
 			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorUnknown, "系統錯誤", nil).H())
 		}
 		return
@@ -70,6 +74,7 @@ func JoinGroup(c *gin.Context) {
 		if errors.Is(err, sql.ErrNoRows) {
 			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorNotFound, "群組不存在", nil).H())
 		} else {
+			log.Printf("[JoinGroup] FindByID group=%d error: %v", req.GroupID, err)
 			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorUnknown, "系統錯誤", nil).H())
 		}
 		return
@@ -90,6 +95,7 @@ func JoinGroup(c *gin.Context) {
 		case errors.Is(err, group.ErrSiteMismatch):
 			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrInvalidParam, "站台不符", nil).H())
 		default:
+			log.Printf("[JoinGroup] Join user=%d group=%d error: %v", userID, req.GroupID, err)
 			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorUnknown, "系統錯誤", nil).H())
 		}
 		return
@@ -113,6 +119,7 @@ func CreateGroup(c *gin.Context) {
 		if errors.Is(err, sql.ErrNoRows) {
 			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrUserNotFound, "用戶不存在", nil).H())
 		} else {
+			log.Printf("[CreateGroup] FindByID user=%d error: %v", userID, err)
 			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorUnknown, "系統錯誤", nil).H())
 		}
 		return
@@ -120,6 +127,7 @@ func CreateGroup(c *gin.Context) {
 
 	groupID, code, err := group.Create(&req, owner)
 	if err != nil {
+		log.Printf("[CreateGroup] Create user=%d title=%q error: %v", userID, req.Title, err)
 		c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorUnknown, "建立群組失敗", nil).H())
 		return
 	}

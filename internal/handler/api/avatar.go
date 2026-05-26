@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 	"errors"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -20,6 +21,7 @@ type avatarResp struct {
 func GetAvatars(c *gin.Context) {
 	avatars, err := getAvatarList()
 	if err != nil {
+		log.Printf("[GetAvatars] getAvatarList error: %v", err)
 		c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorUnknown, "系統錯誤", []avatarResp{}).H())
 		return
 	}
@@ -42,6 +44,7 @@ func SetAvatar(c *gin.Context) {
 	userID := c.MustGet("user_id").(int64)
 
 	if err := user.UpdateAvatar(userID, req.AvatarId); err != nil {
+		log.Printf("[SetAvatar] UpdateAvatar user=%d avatar=%d error: %v", userID, req.AvatarId, err)
 		c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorUnknown, "系統錯誤", nil).H())
 		return
 	}

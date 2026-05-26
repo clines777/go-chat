@@ -23,8 +23,7 @@ var (
 
 const (
 	RoleMember = int8(0)
-	RoleMod    = int8(1)
-	RoleOwner  = int8(2)
+	RoleOwner  = int8(1)
 )
 
 func genCode(siteBid string) string {
