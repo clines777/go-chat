@@ -13,28 +13,21 @@ import (
 )
 
 var (
-	ErrGroupDismissed    = errors.New("group is dismissed")
-	ErrGroupNotOpen      = errors.New("group is not open to join")
-	ErrLevelInsufficient = errors.New("user level insufficient")
-	ErrGroupFull         = errors.New("group is full")
-	ErrAlreadyMember     = errors.New("already a member")
-	ErrSiteMismatch      = errors.New("site mismatch")
+	ErrGroupDismissed = errors.New("group is dismissed")
+	ErrGroupNotOpen   = errors.New("group is not open to join")
+	ErrGroupFull      = errors.New("group is full")
+	ErrAlreadyMember  = errors.New("already a member")
 )
 
 const (
 	RoleMember = int8(0)
-	RoleMod    = int8(1)
-	RoleOwner  = int8(2)
+	RoleOwner  = int8(1)
 )
 
-func genCode(siteBid string) string {
-	b := make([]byte, 4)
+func genCode() string {
+	b := make([]byte, 5)
 	_, _ = rand.Read(b)
-	prefix := strings.ToUpper(siteBid)
-	if len(prefix) > 4 {
-		prefix = prefix[:4]
-	}
-	return prefix + hex.EncodeToString(b)
+	return strings.ToUpper(hex.EncodeToString(b))
 }
 
 func Create(req *protocol.CreateGroupReq, owner *model.User) (int64, string, error) {
@@ -45,7 +38,7 @@ func Create(req *protocol.CreateGroupReq, owner *model.User) (int64, string, err
 
 	code := req.Code
 	if code == "" {
-		code = genCode(owner.SiteBid)
+		code = genCode()
 	}
 
 	tx, err := d.DB.Beginx()
@@ -56,10 +49,10 @@ func Create(req *protocol.CreateGroupReq, owner *model.User) (int64, string, err
 	var groupID int64
 	err = d.Builder.
 		Insert("chat_group").
-		Columns("site_bid", "title", "code", "open_join", "user_limit", "bulletin",
-			"owner_user_id", "owner_ext_member_id", "owner_ext_username").
-		Values(owner.SiteBid, req.Title, code, req.OpenJoin, req.UserLimit, req.Bulletin,
-			owner.ID, owner.ExtMemberID, owner.ExtUsername).
+		Columns("title", "code", "open_join", "user_limit", "bulletin",
+			"owner_user_id", "owner_username").
+		Values(req.Title, code, req.OpenJoin, req.UserLimit, req.Bulletin,
+			owner.ID, owner.Username).
 		Suffix("RETURNING id").
 		RunWith(tx).
 		QueryRow().
@@ -124,8 +117,8 @@ func GetMemberCount(groupID int64) (int, error) {
 }
 
 var groupColumns = []string{
-	"id", "site_bid", "title", "code", "is_dismiss", "open_join",
-	"user_limit", "join_user_level", "speak_user_level", "owner_user_id", "owner_ext_username",
+	"id", "title", "code", "is_dismiss", "open_join",
+	"user_limit", "owner_user_id", "owner_username",
 	"bulletin", "remark", "visible",
 }
 
@@ -153,16 +146,9 @@ func Join(u *model.User, g *model.ChatGroup) error {
 	if g.IsDismiss {
 		return ErrGroupDismissed
 	}
-	if u.SiteBid != g.SiteBid {
-		return ErrSiteMismatch
-	}
 	if !g.OpenJoin {
 		return ErrGroupNotOpen
 	}
-	if g.JoinUserLevel > 0 && u.UserLevel < g.JoinUserLevel {
-		return ErrLevelInsufficient
-	}
-
 	d, err := db.GetDBConn()
 	if err != nil {
 		return err
@@ -213,9 +199,9 @@ func Join(u *model.User, g *model.ChatGroup) error {
 }
 
 const getMyGroupsSQL = `
-SELECT cg.id, cg.title, cg.code, cg.open_join, cg.join_user_level,
+SELECT cg.id, cg.title, cg.code, cg.open_join,
        COALESCE(lr.content, '') AS last_msg,
-       COALESCE(EXTRACT(EPOCH FROM lr.create_time)::bigint, 0) AS last_msg_time
+       COALESCE(lr.create_time, 0) AS last_msg_time
 FROM chat_group cg
 JOIN group_user gu ON gu.group_id = cg.id
     AND gu.user_id = $1
@@ -226,8 +212,8 @@ LEFT JOIN LATERAL (
     WHERE group_id = cg.id AND deleted = false
     ORDER BY id DESC LIMIT 1
 ) lr ON true
-WHERE cg.site_bid = $2
-  AND cg.is_dismiss = false`
+WHERE cg.is_dismiss = false
+ORDER BY last_msg_time DESC, cg.id ASC`
 
 const getLobbyGroupsSQL = `
 SELECT cg.id, cg.title, COALESCE(gu_count.cnt, 0)::int AS member_count
@@ -238,20 +224,19 @@ LEFT JOIN (
     WHERE deleted = false
     GROUP BY group_id
 ) gu_count ON gu_count.group_id = cg.id
-WHERE cg.site_bid = $1
-  AND cg.visible = true
+WHERE cg.visible = true
   AND cg.open_join = true
   AND cg.is_dismiss = false
 ORDER BY cg.sort ASC
-LIMIT $2 OFFSET $3`
+LIMIT $1 OFFSET $2`
 
 const LobbyPageSize = 20
 const MyGroupPageSize = 20
 
 const getMyGroupsPagedSQL = `
-SELECT cg.id, cg.title, cg.code, cg.open_join, cg.join_user_level,
+SELECT cg.id, cg.title, cg.code, cg.open_join,
        COALESCE(lr.content, '') AS last_msg,
-       COALESCE(EXTRACT(EPOCH FROM lr.create_time)::bigint, 0) AS last_msg_time
+       COALESCE(lr.create_time, 0) AS last_msg_time
 FROM chat_group cg
 JOIN group_user gu ON gu.group_id = cg.id
     AND gu.user_id = $1
@@ -262,12 +247,11 @@ LEFT JOIN LATERAL (
     WHERE group_id = cg.id AND deleted = false
     ORDER BY id DESC LIMIT 1
 ) lr ON true
-WHERE cg.site_bid = $2
-  AND cg.is_dismiss = false
+WHERE cg.is_dismiss = false
 ORDER BY last_msg_time DESC, cg.id ASC
-LIMIT $3 OFFSET $4`
+LIMIT $2 OFFSET $3`
 
-func GetLobbyGroups(siteBid string, page int32) ([]protocol.DisplayLobbyGroup, error) {
+func GetLobbyGroups(page int32) ([]protocol.DisplayLobbyGroup, error) {
 	d, err := db.GetDBConn()
 	if err != nil {
 		return nil, err
@@ -277,13 +261,13 @@ func GetLobbyGroups(siteBid string, page int32) ([]protocol.DisplayLobbyGroup, e
 	}
 	offset := (page - 1) * LobbyPageSize
 	rows := make([]protocol.DisplayLobbyGroup, 0)
-	if err := d.DB.Select(&rows, getLobbyGroupsSQL, siteBid, LobbyPageSize, offset); err != nil {
+	if err := d.DB.Select(&rows, getLobbyGroupsSQL, LobbyPageSize, offset); err != nil {
 		return nil, err
 	}
 	return rows, nil
 }
 
-func GetMyGroupsPaged(userID int64, siteBid string, page int32) ([]protocol.DisplayUserGroup, error) {
+func GetMyGroupsPaged(userID int64, page int32) ([]protocol.DisplayUserGroup, error) {
 	d, err := db.GetDBConn()
 	if err != nil {
 		return nil, err
@@ -293,20 +277,20 @@ func GetMyGroupsPaged(userID int64, siteBid string, page int32) ([]protocol.Disp
 	}
 	offset := (page - 1) * MyGroupPageSize
 	rows := make([]protocol.DisplayUserGroup, 0)
-	if err := d.DB.Select(&rows, getMyGroupsPagedSQL, userID, siteBid, MyGroupPageSize, offset); err != nil {
+	if err := d.DB.Select(&rows, getMyGroupsPagedSQL, userID, MyGroupPageSize, offset); err != nil {
 		return nil, err
 	}
 	return rows, nil
 }
 
-func GetMyGroups(userID int64, siteBid string) ([]protocol.DisplayUserGroup, error) {
+func GetMyGroups(userID int64) ([]protocol.DisplayUserGroup, error) {
 	d, err := db.GetDBConn()
 	if err != nil {
 		return nil, err
 	}
 
 	rows := make([]protocol.DisplayUserGroup, 0)
-	if err := d.DB.Select(&rows, getMyGroupsSQL, userID, siteBid); err != nil {
+	if err := d.DB.Select(&rows, getMyGroupsSQL, userID); err != nil {
 		return nil, err
 	}
 

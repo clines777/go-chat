@@ -3,10 +3,7 @@ package protocol
 import _ "github.com/go-playground/validator/v10"
 
 type GetTokenReq struct {
-	SiteBid   string `json:"site_bid"`
-	Username  string `json:"username"`
-	MemberId  int64  `json:"member_id"`
-	UserLevel int32  `json:"user_level,omitempty"`
+	Username string `json:"username"`
 }
 
 type GetUserInfoReq struct {
@@ -18,8 +15,7 @@ type GetGroupInfoReq struct {
 }
 
 type ApiTokenPayload struct {
-	UserID  int64  `json:"user_id"`
-	SiteBid string `json:"site_bid"`
+	UserID int64 `json:"user_id"`
 }
 
 type JoinGroupReq struct {
@@ -44,6 +40,5 @@ type ResumeReq struct {
 
 type ResumeTokenPayload struct {
 	UserID   int64  `json:"user_id"`
-	SiteBid  string `json:"site_bid"`
 	Username string `json:"username"`
 }

@@ -14,7 +14,7 @@ import (
 
 const TypeText = int16(1)
 
-func SaveRecord(siteBid string, groupID int32, userID int64, content string) (*model.ChatRecord, error) {
+func SaveRecord(groupID int32, userID int64, content string) (*model.ChatRecord, error) {
 	d, err := db.GetDBConn()
 	if err != nil {
 		return nil, err
@@ -25,8 +25,8 @@ func SaveRecord(siteBid string, groupID int32, userID int64, content string) (*m
 
 	err = d.Builder.
 		Insert("chat_record").
-		Columns("site_bid", "group_id", "user_id", "type", "content", "create_time", "update_time").
-		Values(siteBid, groupID, userID, TypeText, content, now, now).
+		Columns("group_id", "user_id", "type", "content", "create_time", "update_time").
+		Values(groupID, userID, TypeText, content, now, now).
 		Suffix("RETURNING id").
 		RunWith(d.DB).
 		QueryRow().
@@ -37,7 +37,6 @@ func SaveRecord(siteBid string, groupID int32, userID int64, content string) (*m
 
 	return &model.ChatRecord{
 		ID:         id,
-		SiteBid:    siteBid,
 		GroupID:    int(groupID),
 		UserID:     int(userID),
 		Type:       TypeText,
@@ -53,9 +52,14 @@ func GetRecentChats(groupID int32, limit int32) ([]protocol.ChatInfo, error) {
 	}
 
 	sub := d.Builder.
-		Select("cr.id", "u.ext_username AS username", "cr.content", "cr.create_time").
+		Select(
+			"cr.id", "cr.user_id", "u.username AS username",
+			"COALESCE('/static/avatars/' || av.filename, '') AS avatar_url",
+			"cr.content", "cr.create_time",
+		).
 		From("chat_record cr").
 		Join(`"user" u ON u.id = cr.user_id`).
+		LeftJoin("avatar av ON av.id = u.avatar_id").
 		Where(sq.Eq{"cr.group_id": groupID, "cr.deleted": false}).
 		OrderBy("cr.create_time DESC").
 		Limit(uint64(limit))

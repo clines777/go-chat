@@ -1,16 +1,17 @@
 package protocol
 
 import (
+	"encoding/json"
 	_ "github.com/go-playground/validator/v10"
 )
 
 type Payload struct {
-	MsgType Type   `json:"msg_type"`
-	ErrCode int    `json:"err_code,omitempty"`
-	Remark  string `json:"remark,omitempty"`
-	Data    []byte `json:"data,omitempty"`
-	Meta    *Meta  `json:"meta,omitempty"`
-	Origin  *Payload
+	MsgType Type            `json:"msg_type"`
+	ErrCode int             `json:"err_code,omitempty"`
+	Remark  string          `json:"remark,omitempty"`
+	Data    json.RawMessage `json:"data,omitempty"`
+	Meta    *Meta           `json:"meta,omitempty"`
+	Origin  *Payload `json:"-"`
 }
 
 type Meta struct {
@@ -35,9 +36,8 @@ type DisplayUserGroup struct {
 	Id            int64  `db:"id"             json:"id"`
 	Title         string `db:"title"          json:"title"`
 	Code          string `db:"code"           json:"code"`
-	OpenJoin      bool   `db:"open_join"      json:"open_join"`
-	JoinUserLevel int32  `db:"join_user_level" json:"join_user_level"`
-	LastMsg       string `db:"last_msg"      json:"last_msg"`
+	OpenJoin    bool   `db:"open_join"  json:"open_join"`
+	LastMsg     string `db:"last_msg"   json:"last_msg"`
 	LastMsgTime   int64  `db:"last_msg_time" json:"last_msg_time"`
 }
 
@@ -81,6 +81,7 @@ type CastChatEvent struct {
 	GroupId    int32  `json:"group_id"`
 	UserId     int64  `json:"user_id"`
 	Username   string `json:"username"`
+	AvatarURL  string `json:"avatar_url"`
 	Content    string `json:"content"`
 	CreateTime int64  `json:"create_time"`
 }
@@ -91,25 +92,27 @@ type EnterGroupReq struct {
 
 type ChatInfo struct {
 	ID         int64  `db:"id"`
+	UserID     int64  `db:"user_id"`
 	Username   string `db:"username"`
+	AvatarURL  string `db:"avatar_url" json:"avatar_url"`
 	Content    string `db:"content"`
 	CreateTime int64  `db:"create_time"`
 }
 
 type EnterGroupResp struct {
-	Title          string     `json:"title" json:"title"`
-	GroupId        int32      `json:"group_id" json:"group_id"`
-	GroupUserCount int32      `json:"group_user_count" json:"group_user_count"`
-	Chats          []ChatInfo `json:"chats" json:"chats"`
+	Title          string     `json:"title"`
+	GroupId        int32      `json:"group_id"`
+	GroupUserCount int32      `json:"group_user_count"`
+	Chats          []ChatInfo `json:"chats"`
 }
 
 type UserSelfResp struct {
 	Id         int64  `json:"id"`
 	Username   string `json:"username"`
 	Nickname   string `json:"nickname"`
+	AvatarURL  string `json:"avatar_url"`
 	CreateTime int64  `json:"create_time"`
 	Code       string `json:"code"`
-	UserLevel  int32  `json:"user_level"`
 }
 
 type GroupInfoResp struct {
@@ -117,6 +120,7 @@ type GroupInfoResp struct {
 	UserTotal     int32  `json:"user_total"`
 	Bulletin      string `json:"bulletin"`
 	OwnerUsername string `json:"owner_username"`
+	OwnerUserID   int64  `json:"owner_user_id"`
 	Code          string `json:"code"`
 	Remark        string `json:"remark"`
 }

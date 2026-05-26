@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GoChat</title>
+  <script src="https://unpkg.com/vue@3.4.0/dist/vue.global.prod.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-base:    #1e1e2e;
+      --bg-sidebar: #181825;
+      --bg-crust:   #11111b;
+      --bg-s0:      #313244;
+      --bg-s1:      #45475a;
+      --text:       #cdd6f4;
+      --subtext:    #a6adc8;
+      --muted:      #6c7086;
+      --accent:     #cba6f7;
+      --accent2:    #b4befe;
+      --green:      #a6e3a1;
+      --red:        #f38ba8;
+      --border:     #313244;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-base);
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--bg-s1); border-radius: 3px; }
+
+    /* ── Login ── */
+    .login-wrapper {
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-crust);
+    }
+
+    .login-card {
+      background: var(--bg-base);
+      border: 1px solid var(--bg-s0);
+      border-radius: 18px;
+      padding: 44px 52px;
+      width: 420px;
+      box-shadow: 0 32px 80px rgba(0,0,0,.6);
+    }
+
+    .login-logo {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+    .login-logo h1 {
+      font-size: 30px;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+    }
+    .login-logo p { color: var(--subtext); font-size: 13px; margin-top: 5px; }
+
+    .form-group { margin-bottom: 18px; }
+    .form-group label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--subtext);
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      margin-bottom: 7px;
+    }
+    .form-group input {
+      width: 100%;
+      background: var(--bg-s0);
+      border: 1px solid var(--bg-s1);
+      border-radius: 9px;
+      padding: 11px 15px;
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+      transition: border-color .15s;
+    }
+    .form-group input:focus { border-color: var(--accent); }
+    .form-group input::placeholder { color: var(--muted); }
+
+    .login-btn {
+      width: 100%;
+      background: var(--accent);
+      color: var(--bg-crust);
+      border: none;
+      border-radius: 9px;
+      padding: 13px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 26px;
+      transition: opacity .15s, transform .1s;
+    }
+    .login-btn:hover:not(:disabled) { opacity: .9; transform: translateY(-1px); }
+    .login-btn:disabled { opacity: .55; cursor: default; }
+
+    .login-error {
+      margin-top: 16px;
+      background: rgba(243,139,168,.12);
+      border: 1px solid var(--red);
+      color: var(--red);
+      border-radius: 8px;
+      padding: 11px 15px;
+      font-size: 13px;
+    }
+
+    /* ── Chat Layout ── */
+    .chat-layout {
+      display: flex;
+      height: 100vh;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 264px;
+      min-width: 264px;
+      background: var(--bg-sidebar);
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+    }
+
+    .user-section {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 14px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .user-section:hover { background: var(--bg-s0); }
+
+    .ava {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      overflow: hidden;
+      background: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 800;
+      color: var(--bg-crust);
+      flex-shrink: 0;
+    }
+    .ava img { width: 100%; height: 100%; object-fit: cover; }
+
+    .user-meta { flex: 1; min-width: 0; }
+    .user-meta .uname {
+      font-size: 14px; font-weight: 600;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .user-meta .ustatus { font-size: 11px; color: var(--green); margin-top: 1px; }
+
+    .icon-btn {
+      background: none; border: none;
+      color: var(--muted); cursor: pointer;
+      font-size: 15px; padding: 4px;
+      border-radius: 5px; transition: color .15s;
+    }
+    .icon-btn:hover { color: var(--text); }
+
+    /* Tabs */
+    .tab-bar {
+      display: flex;
+      align-items: center;
+      padding: 14px 10px 0;
+      gap: 4px;
+    }
+    .tab-btn {
+      flex: 1;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--subtext);
+      font-size: 13px; font-weight: 600;
+      padding: 8px 4px 10px;
+      cursor: pointer;
+      text-align: center;
+      transition: all .15s;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .create-group-btn {
+      background: none; border: none;
+      color: var(--subtext); cursor: pointer;
+      font-size: 18px; padding: 2px 4px 10px;
+      line-height: 1; border-bottom: 2px solid transparent;
+      transition: color .15s;
+    }
+    .create-group-btn:hover { color: var(--accent); }
+
+    /* Create group form */
+    .cg-field { margin-bottom: 16px; }
+    .cg-field label { display: block; font-size: 12px; font-weight: 600; color: var(--subtext); margin-bottom: 6px; }
+    .cg-field input[type=text], .cg-field input[type=number], .cg-field textarea {
+      width: 100%; box-sizing: border-box;
+      background: var(--bg-s0); border: 1px solid var(--bg-s1);
+      border-radius: 8px; color: var(--text); font-size: 14px;
+      padding: 9px 12px; outline: none; transition: border-color .15s;
+      font-family: inherit;
+    }
+    .cg-field input:focus, .cg-field textarea:focus { border-color: var(--accent); }
+    .cg-field input::placeholder, .cg-field textarea::placeholder { color: var(--muted); }
+    .cg-field textarea { resize: vertical; min-height: 70px; }
+    .cg-checkbox { display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; font-size: 14px; }
+    .cg-checkbox input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+    .modal-submit {
+      width: 100%; background: var(--accent); border: none;
+      border-radius: 9px; color: var(--bg-crust); font-size: 14px;
+      font-weight: 700; padding: 11px; cursor: pointer;
+      transition: opacity .15s; margin-bottom: 10px;
+    }
+    .modal-submit:hover:not(:disabled) { opacity: .88; }
+    .modal-submit:disabled { opacity: .4; cursor: default; }
+
+    /* Group list */
+    .group-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 6px 8px;
+    }
+
+    .group-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 7px 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background .1s;
+      margin-bottom: 1px;
+    }
+    .group-item:hover { background: var(--bg-s0); }
+    .group-item.active { background: var(--bg-s0); }
+    .group-item.active .g-name { color: var(--text); }
+    .group-item.active .g-icon { background: var(--accent); color: var(--bg-crust); }
+
+    .g-icon {
+      width: 34px; height: 34px;
+      border-radius: 9px;
+      background: var(--bg-s1);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; font-weight: 700;
+      color: var(--subtext);
+      flex-shrink: 0;
+      transition: all .15s;
+    }
+
+    .g-details { flex: 1; min-width: 0; }
+    .g-name {
+      font-size: 13px; font-weight: 500;
+      color: var(--subtext);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .g-meta {
+      font-size: 11px; color: var(--muted);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      margin-top: 1px;
+    }
+
+    .join-btn {
+      background: none;
+      border: 1px solid var(--accent);
+      border-radius: 5px;
+      color: var(--accent);
+      font-size: 11px; font-weight: 600;
+      padding: 3px 8px;
+      cursor: pointer;
+      transition: all .15s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .join-btn:hover { background: var(--accent); color: var(--bg-crust); }
+
+    .sidebar-empty {
+      text-align: center;
+      padding: 40px 16px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+    .sidebar-empty .e-icon { font-size: 32px; margin-bottom: 8px; }
+
+    /* ── Main area ── */
+    .main-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      background: var(--bg-base);
+    }
+
+    /* ── Info panel ── */
+    .info-panel {
+      width: 240px;
+      min-width: 240px;
+      background: var(--bg-sidebar);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 20px 16px;
+      gap: 0;
+    }
+    .ip-title {
+      font-size: 15px; font-weight: 800;
+      color: var(--text);
+      margin-bottom: 4px;
+      word-break: break-word;
+    }
+    .ip-count {
+      font-size: 12px; color: var(--subtext);
+      margin-bottom: 20px;
+    }
+    .ip-section {
+      margin-bottom: 18px;
+    }
+    .ip-label {
+      font-size: 10px; font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase; letter-spacing: .8px;
+      margin-bottom: 6px;
+    }
+    .ip-value {
+      font-size: 13px; color: var(--text);
+      line-height: 1.5;
+      word-break: break-word;
+    }
+    .ip-value.muted { color: var(--muted); font-style: italic; }
+    .ip-code {
+      font-family: monospace;
+      font-size: 13px;
+      background: var(--bg-s0);
+      border: 1px solid var(--bg-s1);
+      border-radius: 6px;
+      padding: 5px 10px;
+      color: var(--accent2);
+      cursor: pointer;
+      display: inline-block;
+      transition: border-color .15s;
+    }
+    .ip-code:hover { border-color: var(--accent2); }
+    .ip-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 4px 0 18px;
+    }
+
+    .welcome-screen {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      color: var(--muted);
+    }
+    .welcome-screen .w-icon { font-size: 72px; opacity: .4; }
+    .welcome-screen h2 { font-size: 20px; color: var(--subtext); font-weight: 600; }
+    .welcome-screen p { font-size: 13px; line-height: 1.6; text-align: center; }
+
+    /* Group room */
+    .group-room { display: flex; flex-direction: column; height: 100%; }
+
+    .room-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 24px;
+      height: 56px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .room-header h2 { font-size: 16px; font-weight: 700; }
+    .room-header .divider {
+      width: 1px; height: 20px;
+      background: var(--bg-s1);
+      margin: 0 4px;
+    }
+    .room-header .member-badge {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 13px; color: var(--subtext);
+    }
+
+    /* Messages */
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .msg-empty {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+    .msg-empty .e-icon { font-size: 36px; margin-bottom: 8px; }
+
+    .message {
+      display: flex;
+      gap: 12px;
+      padding: 5px 8px;
+      border-radius: 6px;
+      align-items: flex-start;
+      transition: background .1s;
+    }
+    .message:hover { background: rgba(49,50,68,.35); }
+
+    .msg-ava {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      overflow: hidden;
+      background: var(--bg-s0);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 800;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+    .msg-ava img { width: 100%; height: 100%; object-fit: cover; }
+
+    .msg-body { flex: 1; min-width: 0; }
+    .msg-head {
+      display: flex; align-items: baseline; gap: 8px;
+      margin-bottom: 3px;
+    }
+    .msg-user { font-size: 14px; font-weight: 700; color: var(--accent2); }
+    .msg-time { font-size: 11px; color: var(--muted); }
+    .msg-owner-badge {
+      font-size: 10px; font-weight: 700;
+      color: #1e1e2e;
+      background: #f9e2af;
+      border-radius: 3px;
+      padding: 1px 5px;
+      letter-spacing: .3px;
+      line-height: 1.6;
+      align-self: center;
+    }
+    .msg-text { font-size: 14px; color: var(--text); line-height: 1.55; word-break: break-word; }
+
+    /* Input area */
+    .input-area {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 24px;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .chat-input-wrap {
+      flex: 1;
+      background: var(--bg-s0);
+      border: 1px solid var(--bg-s1);
+      border-radius: 11px;
+      display: flex;
+      align-items: center;
+      transition: border-color .15s;
+    }
+    .chat-input-wrap:focus-within { border-color: var(--accent); }
+
+    .chat-input {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      padding: 11px 16px;
+      color: var(--text);
+      font-size: 14px;
+      min-width: 0;
+    }
+    .chat-input::placeholder { color: var(--muted); }
+
+    .send-btn {
+      background: var(--accent);
+      border: none;
+      border-radius: 9px;
+      color: var(--bg-crust);
+      font-size: 14px; font-weight: 700;
+      padding: 11px 22px;
+      cursor: pointer;
+      transition: opacity .15s, transform .1s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .send-btn:hover:not(:disabled) { opacity: .9; transform: translateY(-1px); }
+    .send-btn:disabled { opacity: .4; cursor: default; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.65);
+      backdrop-filter: blur(5px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 200;
+    }
+    .modal {
+      background: var(--bg-base);
+      border: 1px solid var(--bg-s0);
+      border-radius: 18px;
+      padding: 36px;
+      width: 500px;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 32px 80px rgba(0,0,0,.6);
+    }
+    .modal h3 { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+    .modal-sub { color: var(--subtext); font-size: 13px; margin-bottom: 28px; }
+
+    .profile-card {
+      display: flex; align-items: center; gap: 18px;
+      background: var(--bg-s0);
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 28px;
+    }
+    .profile-ava {
+      width: 60px; height: 60px;
+      border-radius: 50%;
+      overflow: hidden;
+      background: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; font-weight: 800;
+      color: var(--bg-crust);
+      flex-shrink: 0;
+    }
+    .profile-ava img { width: 100%; height: 100%; object-fit: cover; }
+    .profile-info .p-name { font-size: 17px; font-weight: 700; }
+    .profile-info .p-id { font-size: 12px; color: var(--subtext); margin-top: 3px; }
+
+    .section-label {
+      font-size: 11px; font-weight: 700;
+      color: var(--subtext);
+      text-transform: uppercase; letter-spacing: .8px;
+      margin-bottom: 14px;
+    }
+
+    .avatar-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+    .ava-opt {
+      aspect-ratio: 1;
+      border-radius: 50%;
+      overflow: hidden;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: border-color .15s, transform .15s;
+    }
+    .ava-opt:hover { transform: scale(1.08); border-color: var(--accent2); }
+    .ava-opt.selected { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(203,166,247,.3); }
+    .ava-opt img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    .modal-close {
+      width: 100%;
+      background: var(--bg-s0);
+      border: none;
+      border-radius: 9px;
+      color: var(--text);
+      font-size: 14px; font-weight: 600;
+      padding: 11px;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .modal-close:hover { background: var(--bg-s1); }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 24px; right: 24px;
+      background: var(--bg-s0);
+      border: 1px solid var(--bg-s1);
+      border-radius: 10px;
+      padding: 13px 20px;
+      font-size: 13px;
+      color: var(--text);
+      box-shadow: 0 8px 32px rgba(0,0,0,.4);
+      z-index: 300;
+      animation: toast-in .2s ease;
+    }
+    @keyframes toast-in {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Dot loader ── */
+    .dot-loader { display: inline-flex; gap: 5px; align-items: center; }
+    .dot-loader span {
+      width: 7px; height: 7px;
+      background: var(--bg-crust);
+      border-radius: 50%;
+      animation: dot-bounce 1.1s infinite ease-in-out;
+    }
+    .dot-loader span:nth-child(2) { animation-delay: .18s; }
+    .dot-loader span:nth-child(3) { animation-delay: .36s; }
+    @keyframes dot-bounce {
+      0%, 80%, 100% { transform: scale(.7); opacity: .5; }
+      40%            { transform: scale(1.1); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ── Login ── -->
+  <div v-if="view === 'login'" class="login-wrapper">
+    <div class="login-card">
+      <div class="login-logo">
+        <h1>💬 GoChat</h1>
+        <p>即時群組聊天系統</p>
+      </div>
+
+      <div class="form-group">
+        <label>使用者名稱</label>
+        <input v-model="loginForm.username" placeholder="username" @keydown.enter="doLogin" />
+      </div>
+      <button class="login-btn" @click="doLogin" :disabled="connecting">
+        <div v-if="connecting" class="dot-loader" style="justify-content:center">
+          <span></span><span></span><span></span>
+        </div>
+        <template v-else>連線</template>
+      </button>
+
+      <div v-if="loginError" class="login-error">{{ loginError }}</div>
+    </div>
+  </div>
+
+  <!-- ── Chat ── -->
+  <div v-else-if="view === 'chat'" class="chat-layout">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="user-section" @click="openProfile">
+        <div class="ava">
+          <img v-if="user.avatarUrl" :src="user.avatarUrl" :alt="user.username" />
+          <template v-else>{{ user.username?.[0]?.toUpperCase() }}</template>
+        </div>
+        <div class="user-meta">
+          <div class="uname">{{ user.username }}</div>
+          <div class="ustatus">● 已連線</div>
+        </div>
+        <button class="icon-btn" title="個人設定">⚙</button>
+      </div>
+
+      <div class="tab-bar">
+        <button class="tab-btn" :class="{active: tab === 'lobby'}"    @click="switchTab('lobby')">大廳</button>
+        <button class="tab-btn" :class="{active: tab === 'mygroups'}" @click="switchTab('mygroups')">我的群組</button>
+        <button class="create-group-btn" title="建立群組" @click="openCreateGroup">＋</button>
+      </div>
+
+      <div class="group-list">
+        <!-- Lobby -->
+        <template v-if="tab === 'lobby'">
+          <div v-if="!lobbyGroups.length" class="sidebar-empty">
+            <div class="e-icon">🏛️</div>
+            暫無開放中群組
+          </div>
+          <div
+            v-for="g in lobbyGroups" :key="g.id"
+            class="group-item" :class="{active: currentGroupId === g.id}"
+            @click="enterGroup(g.id)"
+          >
+            <div class="g-icon">{{ g.title?.[0] }}</div>
+            <div class="g-details">
+              <div class="g-name">{{ g.title }}</div>
+              <div class="g-meta">{{ g.member_count }} 位成員</div>
+            </div>
+            <button
+              v-if="!myGroupIds.has(g.id)"
+              class="join-btn"
+              @click.stop="joinGroup(g.id)"
+            >加入</button>
+          </div>
+        </template>
+
+        <!-- My Groups -->
+        <template v-else>
+          <div v-if="!myGroups.length" class="sidebar-empty">
+            <div class="e-icon">💤</div>
+            尚未加入任何群組<br/>
+            前往「大廳」瀏覽並加入群組
+          </div>
+          <div
+            v-for="g in myGroups" :key="g.id"
+            class="group-item" :class="{active: currentGroupId === g.id}"
+            @click="enterGroup(g.id)"
+          >
+            <div class="g-icon">{{ g.title?.[0] }}</div>
+            <div class="g-details">
+              <div class="g-name">{{ g.title }}</div>
+              <div class="g-meta">{{ g.last_msg || '&nbsp;' }}</div>
+            </div>
+          </div>
+        </template>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main-area">
+      <div v-if="!currentGroupId" class="welcome-screen">
+        <div class="w-icon">💬</div>
+        <h2>選擇一個群組開始聊天</h2>
+        <p>從左側大廳挑選群組，或切換到「我的群組」<br/>進入你已加入的頻道</p>
+      </div>
+
+      <div v-else class="group-room">
+        <div class="room-header">
+          <h2># {{ currentGroup.title }}</h2>
+          <div class="divider"></div>
+          <div class="member-badge">
+            <span>👥</span>
+            <span>{{ currentGroup.memberCount }} 位成員</span>
+          </div>
+        </div>
+
+        <div class="messages" ref="msgsRef">
+          <div v-if="!currentGroup.chats.length" class="msg-empty">
+            <div class="e-icon">🌱</div>
+            還沒有任何訊息<br/>來發第一則吧！
+          </div>
+          <div
+            v-for="m in currentGroup.chats" :key="m.id"
+            class="message"
+          >
+            <div class="msg-ava">
+              <img v-if="m.avatarUrl" :src="m.avatarUrl" :alt="m.username" />
+              <template v-else>{{ m.username?.[0]?.toUpperCase() }}</template>
+            </div>
+            <div class="msg-body">
+              <div class="msg-head">
+                <span class="msg-user">{{ m.username }}</span>
+                <span v-if="m.userId === groupInfo.ownerUserId && groupInfo.ownerUserId" class="msg-owner-badge">群主</span>
+                <span class="msg-time">{{ formatTime(m.createTime) }}</span>
+              </div>
+              <div class="msg-text">{{ m.content }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="input-area">
+          <div class="chat-input-wrap">
+            <input
+              class="chat-input"
+              v-model="chatInput"
+              :placeholder="`在 #${currentGroup.title} 中發送訊息…`"
+              @keydown.enter.prevent="sendChat"
+            />
+          </div>
+          <button class="send-btn" @click="sendChat" :disabled="!chatInput.trim()">發送</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- Info Panel -->
+    <aside v-if="currentGroupId" class="info-panel">
+      <div class="ip-title"># {{ groupInfo.title || currentGroup.title }}</div>
+      <div class="ip-count">{{ groupInfo.userTotal ?? currentGroup.memberCount }} 位成員</div>
+      <div class="ip-divider"></div>
+
+      <div class="ip-section" v-if="groupInfo.bulletin">
+        <div class="ip-label">公告</div>
+        <div class="ip-value">{{ groupInfo.bulletin }}</div>
+      </div>
+
+      <div class="ip-section">
+        <div class="ip-label">擁有者</div>
+        <div class="ip-value">{{ groupInfo.ownerUsername || '—' }}</div>
+      </div>
+
+      <div class="ip-section" v-if="groupInfo.code">
+        <div class="ip-label">邀請碼</div>
+        <div class="ip-code" @click="copyCode" title="點擊複製">{{ groupInfo.code }}</div>
+      </div>
+
+      <div class="ip-section" v-if="groupInfo.remark">
+        <div class="ip-label">備註</div>
+        <div class="ip-value">{{ groupInfo.remark }}</div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ── Profile Modal ── -->
+  <div v-if="showProfile" class="modal-overlay" @click.self="showProfile = false">
+    <div class="modal">
+      <h3>個人設定</h3>
+      <div class="modal-sub">管理你的個人資料與頭像</div>
+
+      <div class="profile-card">
+        <div class="profile-ava">
+          <img v-if="user.avatarUrl" :src="user.avatarUrl" :alt="user.username" />
+          <template v-else>{{ user.username?.[0]?.toUpperCase() }}</template>
+        </div>
+        <div class="profile-info">
+          <div class="p-name">{{ user.username }}</div>
+          <div class="p-id">UID: {{ user.id }}</div>
+        </div>
+      </div>
+
+      <div class="section-label">選擇頭像</div>
+      <div class="avatar-grid">
+        <div
+          v-for="a in avatarList" :key="a.id"
+          class="ava-opt" :class="{selected: user.avatarUrl === a.url}"
+          @click="setAvatar(a.id, a.url)"
+        >
+          <img :src="a.url" :alt="`avatar-${a.id}`" />
+        </div>
+        <div v-if="!avatarList.length" style="color:var(--muted);font-size:13px;grid-column:1/-1">
+          載入中…
+        </div>
+      </div>
+
+      <button class="modal-close" @click="showProfile = false">關閉</button>
+    </div>
+  </div>
+
+  <!-- ── Create Group Modal ── -->
+  <div v-if="showCreateGroup" class="modal-overlay" @click.self="showCreateGroup = false">
+    <div class="modal">
+      <h3>建立群組</h3>
+      <div class="modal-sub">建立一個新的聊天群組</div>
+
+      <div class="cg-field">
+        <label>群組名稱 *</label>
+        <input type="text" v-model="createGroupForm.title" placeholder="輸入群組名稱" maxlength="30" />
+      </div>
+      <div class="cg-field">
+        <label>邀請碼（選填，留空自動生成）</label>
+        <input type="text" v-model="createGroupForm.code" placeholder="自訂邀請碼" maxlength="20" />
+      </div>
+      <div class="cg-field">
+        <label>人數上限（0 = 不限）</label>
+        <input type="number" v-model.number="createGroupForm.userLimit" min="0" placeholder="0" />
+      </div>
+      <div class="cg-field">
+        <label>公告（選填）</label>
+        <textarea v-model="createGroupForm.bulletin" placeholder="群組公告內容…"></textarea>
+      </div>
+      <div class="cg-field">
+        <label class="cg-checkbox">
+          <input type="checkbox" v-model="createGroupForm.openJoin" />
+          開放任何人自由加入
+        </label>
+      </div>
+
+      <button class="modal-submit" @click="submitCreateGroup" :disabled="!createGroupForm.title.trim()">建立群組</button>
+      <button class="modal-close" @click="showCreateGroup = false">取消</button>
+    </div>
+  </div>
+
+  <!-- ── Toast ── -->
+  <div v-if="toast" class="toast">{{ toast }}</div>
+
+</div>
+
+<script>
+const { createApp, ref, reactive, computed, nextTick } = Vue;
+
+
+createApp({
+  setup() {
+    const view       = ref('login');
+    const connecting = ref(false);
+    const loginError = ref('');
+    const toast      = ref('');
+
+    const loginForm = reactive({ username: 'user001' });
+
+    const user = reactive({
+      id: 0, username: '', apiToken: '', resumeToken: '', avatarUrl: '',
+    });
+
+    const showCreateGroup  = ref(false);
+    const createGroupForm  = reactive({ title: '', code: '', userLimit: 0, bulletin: '', openJoin: false });
+
+    const groupInfo = reactive({ title: '', userTotal: null, bulletin: '', ownerUsername: '', ownerUserId: 0, code: '', remark: '' });
+
+    let wsConn = null;
+
+    const tab           = ref('lobby');
+    const currentGroupId = ref(null);
+    const showProfile   = ref(false);
+    const avatarList    = ref([]);
+
+    const lobbyGroups = ref([]);
+    const myGroups    = ref([]);
+
+    const myGroupIds = computed(() => new Set(myGroups.value.map(g => g.id)));
+
+    const currentGroup = reactive({ id: 0, title: '', memberCount: 0, chats: [] });
+
+    const chatInput = ref('');
+    const msgsRef   = ref(null);
+
+    let toastTimer = null;
+
+    // ── Helpers ──
+
+    function showToast(msg) {
+      toast.value = msg;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { toast.value = ''; }, 3000);
+    }
+
+    function scrollToBottom() {
+      nextTick(() => {
+        if (msgsRef.value) msgsRef.value.scrollTop = msgsRef.value.scrollHeight;
+      });
+    }
+
+    function wsSend(msgType, data) {
+      if (!wsConn || wsConn.readyState !== WebSocket.OPEN) return;
+      const p = { msg_type: msgType };
+      if (data != null) p.data = data;
+      wsConn.send(JSON.stringify(p));
+    }
+
+    // Normalize history messages (ChatInfo has no json tags → Go field names)
+    function normalizeHistory(m) {
+      return {
+        id:         m.ID,
+        userId:     m.UserID,
+        username:   m.Username,
+        avatarUrl:  m.avatar_url || '',
+        content:    m.Content,
+        createTime: m.CreateTime,
+      };
+    }
+
+    // Normalize live cast_chat (CastChatEvent has json tags)
+    function normalizeLive(m) {
+      return {
+        id:         m.id,
+        userId:     m.user_id,
+        username:   m.username,
+        avatarUrl:  m.avatar_url || '',
+        content:    m.content,
+        createTime: m.create_time,
+      };
+    }
+
+    // ── WS message handler ──
+
+    function handleMsg(event) {
+      let msg;
+      try { msg = JSON.parse(event.data); } catch { return; }
+
+      const data = msg.data ?? null;
+
+      switch (msg.msg_type) {
+
+        case 'login_ok':
+          user.id          = data.user_id;
+          user.username    = data.username;
+          user.apiToken    = data.api_token;
+          user.resumeToken = data.resume_token;
+          myGroups.value   = data.user_groups || [];
+          connecting.value = false;
+          tab.value        = 'mygroups';
+          view.value       = 'chat';
+          break;
+
+        case 'enter_lobby_ok':
+          lobbyGroups.value = data.groups || [];
+          break;
+
+        case 'enter_my_group_ok':
+          myGroups.value = data.groups || [];
+          break;
+
+        case 'enter_group_ok':
+          currentGroup.id          = data.group_id;
+          currentGroup.title       = data.title;
+          currentGroup.memberCount = data.group_user_count;
+          currentGroup.chats       = (data.chats || []).map(normalizeHistory);
+          currentGroupId.value     = data.group_id;
+          scrollToBottom();
+          break;
+
+        case 'cast_chat':
+          if (data && data.group_id === currentGroup.id) {
+            currentGroup.chats.push(normalizeLive(data));
+            scrollToBottom();
+          }
+          break;
+
+        case 'send_chat_ok':
+          break;
+
+        case 'error':
+          console.warn('[WS]', msg.err_code, msg.remark);
+          showToast(msg.remark || '發生錯誤');
+          break;
+      }
+    }
+
+    // ── Login ──
+
+    async function doLogin() {
+      const { username } = loginForm;
+      if (!username.trim()) {
+        loginError.value = '請填寫使用者名稱';
+        return;
+      }
+
+      connecting.value = true;
+      loginError.value = '';
+
+      try {
+        const res  = await fetch('/api/auth/get-login-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: username.trim(),
+          }),
+        });
+        const json = await res.json();
+        if (json.code !== 0) throw new Error(json.msg || '取得 Token 失敗');
+
+        const token = json.data.token;
+        const wsUrl = `ws://${location.hostname}:9502/ws`;
+        wsConn = new WebSocket(wsUrl);
+
+        wsConn.onopen    = () => wsSend('login', { token });
+        wsConn.onmessage = handleMsg;
+        wsConn.onerror   = () => {
+          loginError.value = 'WebSocket 連線失敗，請確認伺服器狀態';
+          connecting.value = false;
+          wsConn = null;
+        };
+        wsConn.onclose = () => {
+          if (view.value === 'chat') {
+            view.value       = 'login';
+            loginError.value = '連線已中斷，請重新登入';
+            currentGroupId.value = null;
+          }
+          wsConn = null;
+          connecting.value = false;
+        };
+
+      } catch (e) {
+        loginError.value = e.message || '連線失敗';
+        connecting.value = false;
+      }
+    }
+
+    // ── Navigation ──
+
+    function switchTab(newTab) {
+      tab.value            = newTab;
+      currentGroupId.value = null;
+      if (newTab === 'lobby') {
+        wsSend('enter_lobby', { page: 1 });
+      } else {
+        wsSend('enter_my_group', { page: 1 });
+      }
+    }
+
+    function enterGroup(groupId) {
+      currentGroup.chats = [];
+      groupInfo.title = ''; groupInfo.userTotal = null; groupInfo.bulletin = '';
+      groupInfo.ownerUsername = ''; groupInfo.ownerUserId = 0; groupInfo.code = ''; groupInfo.remark = '';
+      wsSend('enter_group', { group_id: groupId });
+      loadGroupInfo(groupId);
+    }
+
+    async function loadGroupInfo(groupId) {
+      try {
+        const res  = await fetch(`/api/group/info?group_id=${groupId}`, {
+          headers: { Authorization: `Bearer ${user.apiToken}` },
+        });
+        const json = await res.json();
+        if (json.code === 0 && json.data) {
+          const d = json.data;
+          groupInfo.title         = d.title         || '';
+          groupInfo.userTotal     = d.user_total     ?? null;
+          groupInfo.bulletin      = d.bulletin       || '';
+          groupInfo.ownerUsername = d.owner_username || '';
+          groupInfo.ownerUserId   = d.owner_user_id  || 0;
+          groupInfo.code          = d.code           || '';
+          groupInfo.remark        = d.remark         || '';
+        }
+      } catch {}
+    }
+
+    async function copyCode() {
+      if (!groupInfo.code) return;
+      try {
+        await navigator.clipboard.writeText(groupInfo.code);
+        showToast('邀請碼已複製 ✓');
+      } catch {
+        showToast(groupInfo.code);
+      }
+    }
+
+    // ── Chat ──
+
+    function sendChat() {
+      const content = chatInput.value.trim();
+      if (!content || !currentGroup.id) return;
+      wsSend('send_chat', { group_id: currentGroup.id, content });
+      chatInput.value = '';
+    }
+
+    // ── Formatting ──
+
+    function formatTime(ts) {
+      if (!ts) return '';
+      return new Date(ts * 1000).toLocaleTimeString('zh-TW', {
+        hour: '2-digit', minute: '2-digit',
+      });
+    }
+
+    // ── Profile / Avatar ──
+
+    async function openProfile() {
+      showProfile.value = true;
+      if (!avatarList.value.length) await loadAvatars();
+    }
+
+    async function loadAvatars() {
+      try {
+        const res  = await fetch('/api/avatar/list', {
+          headers: { Authorization: `Bearer ${user.apiToken}` },
+        });
+        const json = await res.json();
+        if (json.code === 0) avatarList.value = json.data || [];
+      } catch {}
+    }
+
+    async function setAvatar(avatarId, avatarUrl) {
+      try {
+        const res  = await fetch('/api/avatar/set', {
+          method: 'POST',
+          headers: {
+            'Content-Type':  'application/json',
+            Authorization: `Bearer ${user.apiToken}`,
+          },
+          body: JSON.stringify({ avatar_id: avatarId }),
+        });
+        const json = await res.json();
+        if (json.code === 0) {
+          user.avatarUrl = avatarUrl;
+          showToast('頭像更新成功 ✓');
+        } else {
+          showToast(json.msg || '更新失敗');
+        }
+      } catch {
+        showToast('更新頭像失敗');
+      }
+    }
+
+    // ── Create group ──
+
+    function openCreateGroup() {
+      createGroupForm.title     = '';
+      createGroupForm.code      = '';
+      createGroupForm.userLimit = 0;
+      createGroupForm.bulletin  = '';
+      createGroupForm.openJoin  = false;
+      showCreateGroup.value     = true;
+    }
+
+    async function submitCreateGroup() {
+      if (!createGroupForm.title.trim()) return;
+      try {
+        const res  = await fetch('/api/group/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type':  'application/json',
+            Authorization: `Bearer ${user.apiToken}`,
+          },
+          body: JSON.stringify({
+            title:      createGroupForm.title.trim(),
+            code:       createGroupForm.code.trim() || undefined,
+            user_limit: createGroupForm.userLimit || 0,
+            bulletin:   createGroupForm.bulletin.trim(),
+            open_join:  createGroupForm.openJoin,
+          }),
+        });
+        const json = await res.json();
+        if (json.code === 0) {
+          showCreateGroup.value = false;
+          showToast('群組建立成功 ✓');
+          wsSend('enter_my_group', { page: 1 });
+          tab.value = 'mygroups';
+          if (json.data?.group_id) enterGroup(json.data.group_id);
+        } else {
+          showToast(json.msg || '建立失敗');
+        }
+      } catch {
+        showToast('建立群組失敗');
+      }
+    }
+
+    // ── Join group ──
+
+    async function joinGroup(groupId) {
+      try {
+        const res  = await fetch('/api/group/join', {
+          method: 'POST',
+          headers: {
+            'Content-Type':  'application/json',
+            Authorization: `Bearer ${user.apiToken}`,
+          },
+          body: JSON.stringify({ group_id: groupId }),
+        });
+        const json = await res.json();
+        if (json.code === 0) {
+          showToast('成功加入群組 ✓');
+          enterGroup(groupId);
+        } else {
+          showToast(json.msg || '加入失敗');
+        }
+      } catch {
+        showToast('加入群組失敗');
+      }
+    }
+
+    return {
+      view, connecting, loginError, loginForm, toast,
+      user, tab, currentGroupId, showProfile, avatarList,
+      lobbyGroups, myGroups, myGroupIds, currentGroup,
+      chatInput, msgsRef,
+      showCreateGroup, createGroupForm,
+      groupInfo,
+      doLogin, switchTab, enterGroup, sendChat, formatTime,
+      openProfile, setAvatar, joinGroup,
+      openCreateGroup, submitCreateGroup,
+      copyCode,
+    };
+  },
+}).mount('#app');
+</script>
+</body>
+</html>

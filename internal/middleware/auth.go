@@ -26,7 +26,6 @@ func Auth() gin.HandlerFunc {
 		}
 
 		c.Set("user_id", payload.UserID)
-		c.Set("site_bid", payload.SiteBid)
 		c.Next()
 	}
 }

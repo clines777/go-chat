@@ -3,12 +3,10 @@ package user
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"strings"
 )
 
-func genUserCode(siteBid string, extMemberID int64, username string) string {
-	input := strings.ToLower(siteBid) + fmt.Sprintf("%d", extMemberID) + strings.ToLower(username)
-	hash := sha256.Sum256([]byte(input))
+func genUserCode(username string) string {
+	hash := sha256.Sum256([]byte(strings.ToLower(username)))
 	return strings.ToUpper(hex.EncodeToString(hash[:])[:9])
 }

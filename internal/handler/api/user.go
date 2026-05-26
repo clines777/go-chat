@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 	"errors"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -18,17 +19,23 @@ func GetUserSelfInfo(c *gin.Context) {
 		if errors.Is(err, sql.ErrNoRows) {
 			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrUserNotFound, "用戶不存在", nil).H())
 		} else {
+			log.Printf("[GetUserSelfInfo] FindByID user=%d error: %v", userID, err)
 			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorUnknown, "系統錯誤", nil).H())
 		}
 		return
 	}
 
+	avatarURL := ""
+	if u.AvatarFilename != "" {
+		avatarURL = "/static/avatars/" + u.AvatarFilename
+	}
+
 	c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorNone, "OK", &protocol.UserSelfResp{
 		Id:         u.ID,
-		Username:   u.ExtUsername,
+		Username:   u.Username,
+		AvatarURL:  avatarURL,
 		CreateTime: u.CreateTime,
 		Code:       u.Code,
-		UserLevel:  u.UserLevel,
 	}).H())
 }
 

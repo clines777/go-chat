@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -23,13 +24,14 @@ func GetLoginToken(c *gin.Context) {
 		return
 	}
 
-	if req.SiteBid == "" || req.Username == "" || req.MemberId == 0 {
-		c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrWrongParam, "site_bid, username, member_id 不可為空", nil).H())
+	if req.Username == "" {
+		c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrWrongParam, "username 不可為空", nil).H())
 		return
 	}
 
 	token := genLoginToken(&req)
 	if err := redis.GetRedis().SetJSON(protocol.LoginTokenKey(token), req, 10*time.Second); err != nil {
+		log.Printf("[GetLoginToken] SetJSON user=%s error: %v", req.Username, err)
 		c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorUnknown, "系統錯誤", nil).H())
 		return
 	}
@@ -40,7 +42,7 @@ func GetLoginToken(c *gin.Context) {
 }
 
 func genLoginToken(req *protocol.GetTokenReq) string {
-	info := fmt.Sprintf("%v%v%v%v%v", req.SiteBid, req.MemberId, req.Username, time.Now(), salt)
+	info := fmt.Sprintf("%v%v%v", req.Username, time.Now(), salt)
 	hash := md5.Sum([]byte(info))
-	return strings.ToUpper(req.SiteBid + hex.EncodeToString(hash[:]))
+	return strings.ToUpper(hex.EncodeToString(hash[:]))
 }
