@@ -13,10 +13,10 @@ import (
 )
 
 var (
-	ErrGroupDismissed    = errors.New("group is dismissed")
-	ErrGroupNotOpen  = errors.New("group is not open to join")
-	ErrGroupFull     = errors.New("group is full")
-	ErrAlreadyMember = errors.New("already a member")
+	ErrGroupDismissed = errors.New("group is dismissed")
+	ErrGroupNotOpen   = errors.New("group is not open to join")
+	ErrGroupFull      = errors.New("group is full")
+	ErrAlreadyMember  = errors.New("already a member")
 )
 
 const (
@@ -52,7 +52,7 @@ func Create(req *protocol.CreateGroupReq, owner *model.User) (int64, string, err
 		Columns("title", "code", "open_join", "user_limit", "bulletin",
 			"owner_user_id", "owner_username").
 		Values(req.Title, code, req.OpenJoin, req.UserLimit, req.Bulletin,
-			owner.ID, owner.ExtUsername).
+			owner.ID, owner.Username).
 		Suffix("RETURNING id").
 		RunWith(tx).
 		QueryRow().

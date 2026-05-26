@@ -1,13 +1,13 @@
 package model
 
 type User struct {
-	ID            int64  `db:"id" json:"id"`
-	ExtUsername   string `db:"ext_username" json:"ext_username"`
-	Nickname      string `db:"nickname" json:"nickname"`
-	LastLoginTime int64  `db:"last_login_time" json:"last_login_time"`
-	AvatarID      int32  `db:"avatar_id" json:"avatar_id"`
-	IsSuspended   bool   `db:"is_suspended" json:"is_suspended"`
-	Code          string `db:"code" json:"code"`
+	ID             int64  `db:"id" json:"id"`
+	Username       string `db:"username" json:"username"`
+	Nickname       string `db:"nickname" json:"nickname"`
+	LastLoginTime  int64  `db:"last_login_time" json:"last_login_time"`
+	AvatarID       int32  `db:"avatar_id" json:"avatar_id"`
+	IsSuspended    bool   `db:"is_suspended" json:"is_suspended"`
+	Code           string `db:"code" json:"code"`
 	CreateTime     int64  `db:"create_time" json:"create_time"`
 	UpdateTime     int64  `db:"update_time" json:"update_time"`
 	AvatarFilename string `db:"avatar_filename" json:"-"`

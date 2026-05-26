@@ -31,7 +31,7 @@ func EnterSelf(ctx *ws.Ctx) *protocol.Payload {
 
 	respData, err := json.Marshal(&protocol.UserSelfResp{
 		Id:         u.ID,
-		Username:   u.ExtUsername,
+		Username:   u.Username,
 		Nickname:   u.Nickname,
 		AvatarURL:  avatarURL,
 		CreateTime: u.CreateTime,

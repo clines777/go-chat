@@ -25,7 +25,7 @@ func GenerateResumeToken(u *model.User) (string, error) {
 	token := hex.EncodeToString(b)
 	payload := protocol.ResumeTokenPayload{
 		UserID:   u.ID,
-		Username: u.ExtUsername,
+		Username: u.Username,
 	}
 	if err := redis.GetRedis().SetJSON(protocol.ResumeTokenKey(token), payload, resumeTokenTTL); err != nil {
 		return "", err
@@ -99,7 +99,7 @@ func Login(c *ws.Ctx, tokenInfo *protocol.GetTokenReq) (*model.User, error) {
 	sess := &session.Session{
 		ConnID:    c.Client.ConnID,
 		UserID:    user.ID,
-		Username:  user.ExtUsername,
+		Username:  user.Username,
 		InGroupID: 0,
 		Scene:     protocol.SceneMyGroup,
 	}
@@ -120,13 +120,13 @@ func findUser(username string) (*model.User, error) {
 
 	findSql, args, _ := d.Builder.
 		Select(
-			"u.id", "u.ext_username", "u.code",
+			"u.id", "u.username", "u.code",
 			"u.is_suspended", "u.avatar_id",
 			"COALESCE(av.filename, '') AS avatar_filename",
 		).
 		From(`"user" u`).
 		LeftJoin("avatar av ON av.id = u.avatar_id").
-		Where(sq.Eq{"u.ext_username": username}).
+		Where(sq.Eq{"u.username": username}).
 		Limit(1).ToSql()
 
 	var u model.User
@@ -137,7 +137,7 @@ func findUser(username string) (*model.User, error) {
 	return &u, nil
 }
 
-var userColumns = []string{"id", "ext_username", "nickname", "code", "is_suspended", "avatar_id", "create_time"}
+var userColumns = []string{"id", "username", "nickname", "code", "is_suspended", "avatar_id", "create_time"}
 
 func FindByID(userID int64) (*model.User, error) {
 	d, err := db.GetDBConn()
@@ -147,7 +147,7 @@ func FindByID(userID int64) (*model.User, error) {
 
 	findSql, args, _ := d.Builder.
 		Select(
-			"u.id", "u.ext_username", "u.nickname",
+			"u.id", "u.username", "u.nickname",
 			"u.code", "u.is_suspended", "u.avatar_id", "u.create_time",
 			"COALESCE(av.filename, '') AS avatar_filename",
 		).
@@ -174,7 +174,7 @@ func createUser(tokenInfo *protocol.GetTokenReq, userCode string) (*model.User, 
 	var id int64
 	err = d.Builder.
 		Insert(`"user"`).
-		Columns("ext_username", "code", "last_login_time", "create_time", "update_time").
+		Columns("username", "code", "last_login_time", "create_time", "update_time").
 		Values(tokenInfo.Username, userCode, now, now, now).
 		Suffix("RETURNING id").
 		RunWith(d.DB).
@@ -184,11 +184,11 @@ func createUser(tokenInfo *protocol.GetTokenReq, userCode string) (*model.User, 
 		return nil, err
 	}
 	return &model.User{
-		ID:          id,
-		ExtUsername: tokenInfo.Username,
-		Code:        userCode,
-		CreateTime:  now,
-		UpdateTime:  now,
+		ID:         id,
+		Username:   tokenInfo.Username,
+		Code:       userCode,
+		CreateTime: now,
+		UpdateTime: now,
 	}, nil
 }
 

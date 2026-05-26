@@ -32,7 +32,7 @@ func GetUserSelfInfo(c *gin.Context) {
 
 	c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorNone, "OK", &protocol.UserSelfResp{
 		Id:         u.ID,
-		Username:   u.ExtUsername,
+		Username:   u.Username,
 		AvatarURL:  avatarURL,
 		CreateTime: u.CreateTime,
 		Code:       u.Code,

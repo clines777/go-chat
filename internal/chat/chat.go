@@ -53,7 +53,7 @@ func GetRecentChats(groupID int32, limit int32) ([]protocol.ChatInfo, error) {
 
 	sub := d.Builder.
 		Select(
-			"cr.id", "u.ext_username AS username",
+			"cr.id", "u.username AS username",
 			"COALESCE('/static/avatars/' || av.filename, '') AS avatar_url",
 			"cr.content", "cr.create_time",
 		).

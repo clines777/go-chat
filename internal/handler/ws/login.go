@@ -50,7 +50,7 @@ func Login(ctx *ws.Ctx) *protocol.Payload {
 
 	respData, err := json.Marshal(&protocol.LoginResp{
 		UserID:      u.ID,
-		Username:    u.ExtUsername,
+		Username:    u.Username,
 		ApiToken:    apiToken,
 		ResumeToken: resumeToken,
 		UserGroups:  userGroups,
@@ -59,6 +59,6 @@ func Login(ctx *ws.Ctx) *protocol.Payload {
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
 	}
 
-	log.Printf("[Login] OK user=%d (%s)", u.ID, u.ExtUsername)
+	log.Printf("[Login] OK user=%d (%s)", u.ID, u.Username)
 	return &protocol.Payload{MsgType: protocol.LoginOK, Data: respData, Meta: ctx.Payload.Meta}
 }
