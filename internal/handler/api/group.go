@@ -42,7 +42,7 @@ func GetGroupInfo(c *gin.Context) {
 		Title:         g.Title,
 		UserTotal:     int32(count),
 		Bulletin:      g.Bulletin,
-		OwnerUsername: g.OwnerExtUsername,
+		OwnerUsername: g.OwnerUserName,
 		Code:          g.Code,
 		Remark:        g.Remark,
 	}).H())
@@ -86,14 +86,10 @@ func JoinGroup(c *gin.Context) {
 			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrInvalidParam, "已是群組成員", nil).H())
 		case errors.Is(err, group.ErrGroupFull):
 			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrInvalidParam, "群組已達人數上限", nil).H())
-		case errors.Is(err, group.ErrLevelInsufficient):
-			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrInvalidParam, "用戶等級不足", nil).H())
 		case errors.Is(err, group.ErrGroupNotOpen):
 			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrInvalidParam, "群組未開放加入", nil).H())
 		case errors.Is(err, group.ErrGroupDismissed):
 			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrInvalidParam, "群組已解散", nil).H())
-		case errors.Is(err, group.ErrSiteMismatch):
-			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrInvalidParam, "站台不符", nil).H())
 		default:
 			log.Printf("[JoinGroup] Join user=%d group=%d error: %v", userID, req.GroupID, err)
 			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorUnknown, "系統錯誤", nil).H())

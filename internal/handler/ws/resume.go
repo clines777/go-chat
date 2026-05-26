@@ -28,19 +28,11 @@ func Resume(ctx *ws.Ctx) *protocol.Payload {
 		return protocol.NewErrPayload(protocol.ErrUnauthorized, "invalid or expired token", ctx.Payload)
 	}
 
-	u, err := user.FindByID(tokenPayload.UserID)
-	if err != nil {
-		log.Printf("[Resume] FindByID user=%d error: %v", tokenPayload.UserID, err)
-		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
-	}
-
 	sess := &session.Session{
 		ConnID:    ctx.Client.ConnID,
 		UserID:    tokenPayload.UserID,
-		SiteBid:   tokenPayload.SiteBid,
 		Username:  tokenPayload.Username,
-		UserLevel: u.UserLevel,
-		Scene:     protocol.SceneMyGroup,
+		Scene: protocol.SceneMyGroup,
 	}
 	if err := session.Set(ctx.Client.ConnID, sess); err != nil {
 		log.Printf("[Resume] session.Set error: %v", err)
@@ -48,13 +40,13 @@ func Resume(ctx *ws.Ctx) *protocol.Payload {
 	}
 	ws.Register(ctx.Client)
 
-	userGroups, err := group.GetMyGroups(tokenPayload.UserID, tokenPayload.SiteBid)
+	userGroups, err := group.GetMyGroups(tokenPayload.UserID)
 	if err != nil {
 		log.Printf("[Resume] GetMyGroups user=%d error: %v", tokenPayload.UserID, err)
 		return protocol.NewErrPayload(protocol.ErrInternalError, "fetch groups error", ctx.Payload)
 	}
 
-	apiToken, err := user.GenerateApiToken(tokenPayload.UserID, tokenPayload.SiteBid)
+	apiToken, err := user.GenerateApiToken(tokenPayload.UserID)
 	if err != nil {
 		log.Printf("[Resume] GenerateApiToken error: %v", err)
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)

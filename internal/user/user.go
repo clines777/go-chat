@@ -12,7 +12,6 @@ import (
 	"gochat/internal/protocol"
 	"gochat/internal/session"
 	"gochat/internal/ws"
-	"strings"
 	"time"
 )
 
@@ -26,7 +25,6 @@ func GenerateResumeToken(u *model.User) (string, error) {
 	token := hex.EncodeToString(b)
 	payload := protocol.ResumeTokenPayload{
 		UserID:   u.ID,
-		SiteBid:  u.SiteBid,
 		Username: u.ExtUsername,
 	}
 	if err := redis.GetRedis().SetJSON(protocol.ResumeTokenKey(token), payload, resumeTokenTTL); err != nil {
@@ -51,13 +49,13 @@ func RefreshResumeToken(token string) {
 	_ = redis.GetRedis().Expire(protocol.ResumeTokenKey(token), resumeTokenTTL)
 }
 
-func GenerateApiToken(userID int64, siteBid string) (string, error) {
+func GenerateApiToken(userID int64) (string, error) {
 	b := make([]byte, 16)
 	if _, err := rand.Read(b); err != nil {
 		return "", err
 	}
 	token := hex.EncodeToString(b)
-	payload := protocol.ApiTokenPayload{UserID: userID, SiteBid: siteBid}
+	payload := protocol.ApiTokenPayload{UserID: userID}
 	if err := redis.GetRedis().SetJSON(protocol.ApiTokenKey(token), payload, 24*time.Hour); err != nil {
 		return "", err
 	}
@@ -74,8 +72,6 @@ func GetLoginToken(req protocol.LoginReq) (*protocol.GetTokenReq, error) {
 		return nil, err
 	}
 
-	tokenUser.SiteBid = strings.ToUpper(tokenUser.SiteBid)
-
 	_ = r.Del(key)
 
 	return &tokenUser, nil
@@ -83,12 +79,12 @@ func GetLoginToken(req protocol.LoginReq) (*protocol.GetTokenReq, error) {
 
 func Login(c *ws.Ctx, tokenInfo *protocol.GetTokenReq) (*model.User, error) {
 
-	user, err := findUser(tokenInfo.SiteBid, tokenInfo.Username)
+	user, err := findUser(tokenInfo.Username)
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			return nil, err
 		}
-		userCode := genUserCode(tokenInfo.SiteBid, tokenInfo.MemberId, tokenInfo.Username)
+		userCode := genUserCode(tokenInfo.Username)
 		user, err = createUser(tokenInfo, userCode)
 		if err != nil {
 			return nil, err
@@ -103,9 +99,7 @@ func Login(c *ws.Ctx, tokenInfo *protocol.GetTokenReq) (*model.User, error) {
 	sess := &session.Session{
 		ConnID:    c.Client.ConnID,
 		UserID:    user.ID,
-		SiteBid:   user.SiteBid,
 		Username:  user.ExtUsername,
-		UserLevel: user.UserLevel,
 		InGroupID: 0,
 		Scene:     protocol.SceneMyGroup,
 	}
@@ -118,7 +112,7 @@ func Login(c *ws.Ctx, tokenInfo *protocol.GetTokenReq) (*model.User, error) {
 	return user, nil
 }
 
-func findUser(siteBid string, username string) (*model.User, error) {
+func findUser(username string) (*model.User, error) {
 	d, err := db.GetDBConn()
 	if err != nil {
 		return nil, err
@@ -126,13 +120,13 @@ func findUser(siteBid string, username string) (*model.User, error) {
 
 	findSql, args, _ := d.Builder.
 		Select(
-			"u.id", "u.site_bid", "u.ext_member_id", "u.ext_username", "u.code",
-			"u.user_level", "u.is_suspended", "u.avatar_id",
+			"u.id", "u.ext_username", "u.code",
+			"u.is_suspended", "u.avatar_id",
 			"COALESCE(av.filename, '') AS avatar_filename",
 		).
 		From(`"user" u`).
 		LeftJoin("avatar av ON av.id = u.avatar_id").
-		Where(sq.Eq{"u.site_bid": siteBid, "u.ext_username": username}).
+		Where(sq.Eq{"u.ext_username": username}).
 		Limit(1).ToSql()
 
 	var u model.User
@@ -143,7 +137,7 @@ func findUser(siteBid string, username string) (*model.User, error) {
 	return &u, nil
 }
 
-var userColumns = []string{"id", "site_bid", "ext_member_id", "ext_username", "nickname", "code", "user_level", "is_suspended", "avatar_id", "create_time"}
+var userColumns = []string{"id", "ext_username", "nickname", "code", "is_suspended", "avatar_id", "create_time"}
 
 func FindByID(userID int64) (*model.User, error) {
 	d, err := db.GetDBConn()
@@ -153,33 +147,13 @@ func FindByID(userID int64) (*model.User, error) {
 
 	findSql, args, _ := d.Builder.
 		Select(
-			"u.id", "u.site_bid", "u.ext_member_id", "u.ext_username", "u.nickname",
-			"u.code", "u.user_level", "u.is_suspended", "u.avatar_id", "u.create_time",
+			"u.id", "u.ext_username", "u.nickname",
+			"u.code", "u.is_suspended", "u.avatar_id", "u.create_time",
 			"COALESCE(av.filename, '') AS avatar_filename",
 		).
 		From(`"user" u`).
 		LeftJoin("avatar av ON av.id = u.avatar_id").
 		Where(sq.Eq{"u.id": userID}).
-		Limit(1).ToSql()
-
-	var m model.User
-	if err := d.DB.Get(&m, findSql, args...); err != nil {
-		return nil, err
-	}
-
-	return &m, nil
-}
-
-func FindByExtMember(siteBid string, extMemberID int64) (*model.User, error) {
-	d, err := db.GetDBConn()
-	if err != nil {
-		return nil, err
-	}
-
-	findSql, args, _ := d.Builder.
-		Select(userColumns...).
-		From(`"user"`).
-		Where(sq.Eq{"site_bid": siteBid, "ext_member_id": extMemberID}).
 		Limit(1).ToSql()
 
 	var m model.User
@@ -200,8 +174,8 @@ func createUser(tokenInfo *protocol.GetTokenReq, userCode string) (*model.User, 
 	var id int64
 	err = d.Builder.
 		Insert(`"user"`).
-		Columns("site_bid", "ext_member_id", "ext_username", "code", "last_login_time", "create_time", "update_time").
-		Values(tokenInfo.SiteBid, tokenInfo.MemberId, tokenInfo.Username, userCode, now, now, now).
+		Columns("ext_username", "code", "last_login_time", "create_time", "update_time").
+		Values(tokenInfo.Username, userCode, now, now, now).
 		Suffix("RETURNING id").
 		RunWith(d.DB).
 		QueryRow().
@@ -211,10 +185,7 @@ func createUser(tokenInfo *protocol.GetTokenReq, userCode string) (*model.User, 
 	}
 	return &model.User{
 		ID:          id,
-		SiteBid:     tokenInfo.SiteBid,
-		ExtMemberID: tokenInfo.MemberId,
 		ExtUsername: tokenInfo.Username,
-		UserLevel:   tokenInfo.UserLevel,
 		Code:        userCode,
 		CreateTime:  now,
 		UpdateTime:  now,

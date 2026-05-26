@@ -21,7 +21,7 @@ func EnterMyGroup(ctx *ws.Ctx) *protocol.Payload {
 
 	sess := session.Get(ctx.Client.ConnID)
 
-	groups, err := group.GetMyGroupsPaged(sess.UserID, sess.SiteBid, req.Page)
+	groups, err := group.GetMyGroupsPaged(sess.UserID, req.Page)
 	if err != nil {
 		log.Printf("[EnterMyGroup] GetMyGroupsPaged user=%d page=%d error: %v", sess.UserID, req.Page, err)
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)

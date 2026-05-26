@@ -30,13 +30,13 @@ func Login(ctx *ws.Ctx) *protocol.Payload {
 	}
 	ws.Register(ctx.Client)
 
-	userGroups, err := group.GetMyGroups(u.ID, u.SiteBid)
+	userGroups, err := group.GetMyGroups(u.ID)
 	if err != nil {
 		log.Printf("[Login] GetMyGroups error: %v", err)
 		return protocol.NewErrPayload(protocol.ErrInternalError, "fetch groups error", ctx.Payload)
 	}
 
-	apiToken, err := user.GenerateApiToken(u.ID, u.SiteBid)
+	apiToken, err := user.GenerateApiToken(u.ID)
 	if err != nil {
 		log.Printf("[Login] GenerateApiToken error: %v", err)
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)

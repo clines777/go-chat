@@ -36,9 +36,8 @@ type DisplayUserGroup struct {
 	Id            int64  `db:"id"             json:"id"`
 	Title         string `db:"title"          json:"title"`
 	Code          string `db:"code"           json:"code"`
-	OpenJoin      bool   `db:"open_join"      json:"open_join"`
-	JoinUserLevel int32  `db:"join_user_level" json:"join_user_level"`
-	LastMsg       string `db:"last_msg"      json:"last_msg"`
+	OpenJoin    bool   `db:"open_join"  json:"open_join"`
+	LastMsg     string `db:"last_msg"   json:"last_msg"`
 	LastMsgTime   int64  `db:"last_msg_time" json:"last_msg_time"`
 }
 
@@ -113,7 +112,6 @@ type UserSelfResp struct {
 	AvatarURL  string `json:"avatar_url"`
 	CreateTime int64  `json:"create_time"`
 	Code       string `json:"code"`
-	UserLevel  int32  `json:"user_level"`
 }
 
 type GroupInfoResp struct {

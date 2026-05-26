@@ -21,9 +21,9 @@ func EnterLobby(ctx *ws.Ctx) *protocol.Payload {
 
 	sess := session.Get(ctx.Client.ConnID)
 
-	groups, err := group.GetLobbyGroups(sess.SiteBid, req.Page)
+	groups, err := group.GetLobbyGroups(req.Page)
 	if err != nil {
-		log.Printf("[EnterLobby] GetLobbyGroups site=%s page=%d error: %v", sess.SiteBid, req.Page, err)
+		log.Printf("[EnterLobby] GetLobbyGroups page=%d error: %v", req.Page, err)
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
 	}
 

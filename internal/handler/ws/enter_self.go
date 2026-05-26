@@ -36,7 +36,6 @@ func EnterSelf(ctx *ws.Ctx) *protocol.Payload {
 		AvatarURL:  avatarURL,
 		CreateTime: u.CreateTime,
 		Code:       u.Code,
-		UserLevel:  u.UserLevel,
 	})
 	if err != nil {
 		log.Printf("[EnterSelf] marshal error: %v", err)

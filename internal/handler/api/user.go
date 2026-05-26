@@ -36,7 +36,6 @@ func GetUserSelfInfo(c *gin.Context) {
 		AvatarURL:  avatarURL,
 		CreateTime: u.CreateTime,
 		Code:       u.Code,
-		UserLevel:  u.UserLevel,
 	}).H())
 }
 

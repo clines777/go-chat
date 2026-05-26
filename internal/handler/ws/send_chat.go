@@ -37,11 +37,7 @@ func SendChat(ctx *ws.Ctx) *protocol.Payload {
 	if g.IsDismiss {
 		return protocol.NewErrPayload(protocol.ErrInvalidParam, "group is dismissed", ctx.Payload)
 	}
-	if g.SpeakUserLevel > 0 && int(sess.UserLevel) < g.SpeakUserLevel {
-		return protocol.NewErrPayload(protocol.ErrUnauthorized, "insufficient level", ctx.Payload)
-	}
-
-	record, err := chat.SaveRecord(sess.SiteBid, req.GroupId, sess.UserID, req.Content)
+	record, err := chat.SaveRecord(req.GroupId, sess.UserID, req.Content)
 	if err != nil {
 		log.Printf("[SendChat] SaveRecord group=%d user=%d error: %v", req.GroupId, sess.UserID, err)
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)

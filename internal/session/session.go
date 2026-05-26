@@ -11,9 +11,7 @@ type Session struct {
 	InGroupID int32          `json:"in_group_id,omitempty"`
 	UserID    int64          `json:"user_id"`
 	ConnID    string         `json:"conn_id"`
-	SiteBid   string         `json:"site_bid"`
 	Username  string         `json:"username"`
-	UserLevel int32          `json:"user_level"`
 }
 
 func Get(connID string) *Session {

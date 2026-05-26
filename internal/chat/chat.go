@@ -14,7 +14,7 @@ import (
 
 const TypeText = int16(1)
 
-func SaveRecord(siteBid string, groupID int32, userID int64, content string) (*model.ChatRecord, error) {
+func SaveRecord(groupID int32, userID int64, content string) (*model.ChatRecord, error) {
 	d, err := db.GetDBConn()
 	if err != nil {
 		return nil, err
@@ -25,8 +25,8 @@ func SaveRecord(siteBid string, groupID int32, userID int64, content string) (*m
 
 	err = d.Builder.
 		Insert("chat_record").
-		Columns("site_bid", "group_id", "user_id", "type", "content", "create_time", "update_time").
-		Values(siteBid, groupID, userID, TypeText, content, now, now).
+		Columns("group_id", "user_id", "type", "content", "create_time", "update_time").
+		Values(groupID, userID, TypeText, content, now, now).
 		Suffix("RETURNING id").
 		RunWith(d.DB).
 		QueryRow().
@@ -37,7 +37,6 @@ func SaveRecord(siteBid string, groupID int32, userID int64, content string) (*m
 
 	return &model.ChatRecord{
 		ID:         id,
-		SiteBid:    siteBid,
 		GroupID:    int(groupID),
 		UserID:     int(userID),
 		Type:       TypeText,
