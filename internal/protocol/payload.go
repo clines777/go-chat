@@ -1,16 +1,17 @@
 package protocol
 
 import (
+	"encoding/json"
 	_ "github.com/go-playground/validator/v10"
 )
 
 type Payload struct {
-	MsgType Type   `json:"msg_type"`
-	ErrCode int    `json:"err_code,omitempty"`
-	Remark  string `json:"remark,omitempty"`
-	Data    []byte `json:"data,omitempty"`
-	Meta    *Meta  `json:"meta,omitempty"`
-	Origin  *Payload
+	MsgType Type            `json:"msg_type"`
+	ErrCode int             `json:"err_code,omitempty"`
+	Remark  string          `json:"remark,omitempty"`
+	Data    json.RawMessage `json:"data,omitempty"`
+	Meta    *Meta           `json:"meta,omitempty"`
+	Origin  *Payload `json:"-"`
 }
 
 type Meta struct {

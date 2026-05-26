@@ -7,7 +7,8 @@ import (
 )
 
 func RegisterRoutes(e *gin.Engine) {
-	e.Static("/static", "../../static")
+	e.Static("/static", "./static")
+	e.StaticFile("/", "./web/index.html")
 
 	e.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, (&protocol.ApiResponse{Code: protocol.ErrorNone, Message: "OK"}).H())

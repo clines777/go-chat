@@ -252,7 +252,7 @@ const MyGroupPageSize = 20
 const getMyGroupsPagedSQL = `
 SELECT cg.id, cg.title, cg.code, cg.open_join, cg.join_user_level,
        COALESCE(lr.content, '') AS last_msg,
-       COALESCE(EXTRACT(EPOCH FROM lr.create_time)::bigint, 0) AS last_msg_time
+       COALESCE(lr.create_time, 0) AS last_msg_time
 FROM chat_group cg
 JOIN group_user gu ON gu.group_id = cg.id
     AND gu.user_id = $1

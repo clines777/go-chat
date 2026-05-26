@@ -84,7 +84,10 @@ func GetLoginToken(req protocol.LoginReq) (*protocol.GetTokenReq, error) {
 func Login(c *ws.Ctx, tokenInfo *protocol.GetTokenReq) (*model.User, error) {
 
 	user, err := findUser(tokenInfo.SiteBid, tokenInfo.Username)
-	if err != nil && errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			return nil, err
+		}
 		userCode := genUserCode(tokenInfo.SiteBid, tokenInfo.MemberId, tokenInfo.Username)
 		user, err = createUser(tokenInfo, userCode)
 		if err != nil {
@@ -193,19 +196,29 @@ func createUser(tokenInfo *protocol.GetTokenReq, userCode string) (*model.User, 
 		return nil, err
 	}
 
-	now := time.Now()
-	insertSql, insertArgs, _ := d.Builder.
+	now := time.Now().Unix()
+	var id int64
+	err = d.Builder.
 		Insert(`"user"`).
 		Columns("site_bid", "ext_member_id", "ext_username", "code", "last_login_time", "create_time", "update_time").
 		Values(tokenInfo.SiteBid, tokenInfo.MemberId, tokenInfo.Username, userCode, now, now, now).
-		Suffix("RETURNING *").
-		ToSql()
-
-	var u model.User
-	if err := d.DB.Get(&u, insertSql, insertArgs...); err != nil {
+		Suffix("RETURNING id").
+		RunWith(d.DB).
+		QueryRow().
+		Scan(&id)
+	if err != nil {
 		return nil, err
 	}
-	return &u, nil
+	return &model.User{
+		ID:          id,
+		SiteBid:     tokenInfo.SiteBid,
+		ExtMemberID: tokenInfo.MemberId,
+		ExtUsername: tokenInfo.Username,
+		UserLevel:   tokenInfo.UserLevel,
+		Code:        userCode,
+		CreateTime:  now,
+		UpdateTime:  now,
+	}, nil
 }
 
 func UpdateAvatar(userID int64, avatarID int32) error {

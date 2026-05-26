@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"log"
+
 	"gochat/internal/protocol"
 	"gochat/internal/session"
 	"gochat/internal/user"
@@ -18,6 +20,7 @@ func EnterSelf(ctx *ws.Ctx) *protocol.Payload {
 		if errors.Is(err, sql.ErrNoRows) {
 			return protocol.NewErrPayload(protocol.ErrUserNotFound, "user not found", ctx.Payload)
 		}
+		log.Printf("[EnterSelf] FindByID user=%d error: %v", sess.UserID, err)
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
 	}
 
@@ -26,6 +29,7 @@ func EnterSelf(ctx *ws.Ctx) *protocol.Payload {
 	sess.Scene = protocol.SceneSelfInfo
 	sess.InGroupID = 0
 	if err := session.Set(ctx.Client.ConnID, sess); err != nil {
+		log.Printf("[EnterSelf] session.Set error: %v", err)
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
 	}
 
@@ -44,6 +48,7 @@ func EnterSelf(ctx *ws.Ctx) *protocol.Payload {
 		UserLevel:  u.UserLevel,
 	})
 	if err != nil {
+		log.Printf("[EnterSelf] marshal error: %v", err)
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
 	}
 
