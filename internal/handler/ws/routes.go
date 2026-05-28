@@ -13,4 +13,7 @@ func init() {
 	ws.Default.Register(protocol.EnterSelf, &ws.Route{Handler: EnterSelf})
 	ws.Default.Register(protocol.SendChat, &ws.Route{Handler: SendChat})
 	ws.Default.Register(protocol.Resume, &ws.Route{SessionFree: true, Handler: Resume})
+	ws.Default.Register(protocol.JoinGroup, &ws.Route{Handler: JoinGroup})
+	ws.Default.Register(protocol.LeaveGroup, &ws.Route{Handler: LeaveGroup})
+	ws.Default.Register(protocol.Logout, &ws.Route{Handler: Logout})
 }

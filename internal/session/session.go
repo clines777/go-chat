@@ -8,8 +8,8 @@ import (
 
 type Session struct {
 	Scene     protocol.Scene `json:"scene"`
-	InGroupID int32          `json:"in_group_id,omitempty"`
-	UserID    int64          `json:"user_id"`
+	InGroupID int            `json:"in_group_id,omitempty"`
+	UserID    int            `json:"user_id"`
 	ConnID    string         `json:"conn_id"`
 	Username  string         `json:"username"`
 }

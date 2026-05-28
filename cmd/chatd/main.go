@@ -66,7 +66,7 @@ func main() {
 		if len(parts) != 3 {
 			return
 		}
-		gid, err := strconv.ParseInt(parts[2], 10, 32)
+		gid, err := strconv.Atoi(parts[2])
 		if err != nil {
 			return
 		}
@@ -74,7 +74,7 @@ func main() {
 		if err != nil {
 			return
 		}
-		ws.BroadcastToGroup(int32(gid), wsMsg)
+		ws.BroadcastToGroup(gid, wsMsg)
 	}); err != nil {
 		log.Fatalf("nats subscribe failed: %v", err)
 	}

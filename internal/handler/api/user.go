@@ -12,7 +12,7 @@ import (
 )
 
 func GetUserSelfInfo(c *gin.Context) {
-	userID := c.MustGet("user_id").(int64)
+	userID := c.MustGet("user_id").(int)
 
 	u, err := user.FindByID(userID)
 	if err != nil {

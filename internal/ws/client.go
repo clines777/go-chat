@@ -23,6 +23,7 @@ type Client struct {
 	ConnID string
 	Conn   *websocket.Conn
 	Send   chan []byte
+	UserId int
 }
 
 func NewClient(conn *websocket.Conn) *Client {
@@ -81,8 +82,8 @@ var hub = struct {
 
 func Register(c *Client) {
 	hub.mu.Lock()
+	defer hub.mu.Unlock()
 	hub.clients[c.ConnID] = c
-	hub.mu.Unlock()
 }
 
 func Unregister(connID string) {
@@ -90,21 +91,21 @@ func Unregister(connID string) {
 	delete(hub.clients, connID)
 	hub.mu.Unlock()
 
-	LeaveAllGroups(connID)
+	ResetGroupScene(connID)
 	_ = redis.GetRedis().Del(protocol.SessionKey(connID))
 }
 
 // groupSubs tracks which clients are currently viewing each group on this server.
 var groupSubs = struct {
-	byGroup map[int32]map[string]*Client
-	byConn  map[string]int32
+	byGroup map[int]map[string]*Client
+	byConn  map[string]int
 	mu      sync.RWMutex
 }{
-	byGroup: make(map[int32]map[string]*Client),
-	byConn:  make(map[string]int32),
+	byGroup: make(map[int]map[string]*Client),
+	byConn:  make(map[string]int),
 }
 
-func JoinGroup(connID string, groupID int32, c *Client) {
+func JoinGroup(connID string, groupID int, c *Client) {
 	groupSubs.mu.Lock()
 	defer groupSubs.mu.Unlock()
 
@@ -118,7 +119,7 @@ func JoinGroup(connID string, groupID int32, c *Client) {
 	groupSubs.byConn[connID] = groupID
 }
 
-func LeaveAllGroups(connID string) {
+func ResetGroupScene(connID string) {
 	groupSubs.mu.Lock()
 	defer groupSubs.mu.Unlock()
 
@@ -128,7 +129,7 @@ func LeaveAllGroups(connID string) {
 	}
 }
 
-func BroadcastToGroup(groupID int32, data []byte) {
+func BroadcastToGroup(groupID int, data []byte) {
 	groupSubs.mu.RLock()
 	defer groupSubs.mu.RUnlock()
 

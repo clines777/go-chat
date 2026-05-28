@@ -14,14 +14,14 @@ import (
 
 const TypeText = int16(1)
 
-func SaveRecord(groupID int32, userID int64, content string) (*model.ChatRecord, error) {
+func SaveRecord(groupID int, userID int, content string) (*model.ChatRecord, error) {
 	d, err := db.GetDBConn()
 	if err != nil {
 		return nil, err
 	}
 
 	now := time.Now().Unix()
-	var id int64
+	var id int
 
 	err = d.Builder.
 		Insert("chat_record").
@@ -37,15 +37,15 @@ func SaveRecord(groupID int32, userID int64, content string) (*model.ChatRecord,
 
 	return &model.ChatRecord{
 		ID:         id,
-		GroupID:    int(groupID),
-		UserID:     int(userID),
+		GroupID:    groupID,
+		UserID:     userID,
 		Type:       TypeText,
 		Content:    content,
-		CreateTime: now,
+		CreateTime: int(now),
 	}, nil
 }
 
-func GetRecentChats(groupID int32, limit int32) ([]protocol.ChatInfo, error) {
+func GetRecentChats(groupID int, limit int) ([]protocol.ChatInfo, error) {
 	d, err := db.GetDBConn()
 	if err != nil {
 		return nil, err

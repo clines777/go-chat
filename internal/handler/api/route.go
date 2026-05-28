@@ -38,6 +38,6 @@ func RegisterRoutes(e *gin.Engine) {
 	{
 		groupGroup.POST("/create", CreateGroup)
 		groupGroup.GET("/info", GetGroupInfo)
-		groupGroup.POST("/join", JoinGroup)
+		groupGroup.POST("/cover/upload", UploadGroupCover)
 	}
 }

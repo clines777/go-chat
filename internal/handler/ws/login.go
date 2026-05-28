@@ -28,6 +28,8 @@ func Login(ctx *ws.Ctx) *protocol.Payload {
 		log.Printf("[Login] user.Login error: %v", err)
 		return protocol.NewErrPayload(protocol.ErrInternalError, "user login error", ctx.Payload)
 	}
+
+	ctx.Client.UserId = u.ID // 補上user id用於後續辨識連線用戶身份.
 	ws.Register(ctx.Client)
 
 	userGroups, err := group.GetMyGroups(u.ID)

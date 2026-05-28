@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -16,7 +17,7 @@ type responseRecorder struct {
 	status int
 }
 
-const respBufLimit = 4 << 10 // 4KB
+const respBufLimit = 1024 * 4 // 4KB
 
 func (r *responseRecorder) Write(b []byte) (int, error) {
 	if r.buf.Len() < respBufLimit {
@@ -40,9 +41,10 @@ func Logger() gin.HandlerFunc {
 		start := time.Now()
 
 		var reqBody []byte
-		if c.Request.Body != nil {
-			reqBody, _ = io.ReadAll(io.LimitReader(c.Request.Body, 4<<10))
-			c.Request.Body = io.NopCloser(bytes.NewBuffer(reqBody))
+		ct := c.Request.Header.Get("Content-Type")
+		if c.Request.Body != nil && !strings.HasPrefix(ct, "multipart/") {
+			reqBody, _ = io.ReadAll(io.LimitReader(c.Request.Body, respBufLimit))
+			c.Request.Body = io.NopCloser(io.MultiReader(bytes.NewBuffer(reqBody), c.Request.Body))
 		}
 
 		rec := &responseRecorder{
