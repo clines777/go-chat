@@ -18,3 +18,4 @@
 .idea/*
 .claude/*
 .env
+/static/group-covers/*

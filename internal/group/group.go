@@ -119,7 +119,7 @@ func GetMemberCount(groupID int64) (int, error) {
 var groupColumns = []string{
 	"id", "title", "code", "is_dismiss", "open_join",
 	"user_limit", "owner_user_id", "owner_username",
-	"bulletin", "remark", "visible",
+	"bulletin", "remark", "visible", "cover_filename",
 }
 
 func FindByID(groupID int64) (*model.ChatGroup, error) {
@@ -201,7 +201,11 @@ func Join(u *model.User, g *model.ChatGroup) error {
 const getMyGroupsSQL = `
 SELECT cg.id, cg.title, cg.code, cg.open_join,
        COALESCE(lr.content, '') AS last_msg,
-       COALESCE(lr.create_time, 0) AS last_msg_time
+       COALESCE(lr.create_time, 0) AS last_msg_time,
+       CASE WHEN cg.cover_filename = '' OR cg.cover_filename IS NULL
+            THEN ''
+            ELSE '/static/group-covers/' || cg.cover_filename
+       END AS cover_url
 FROM chat_group cg
 JOIN group_user gu ON gu.group_id = cg.id
     AND gu.user_id = $1
@@ -216,7 +220,11 @@ WHERE cg.is_dismiss = false
 ORDER BY last_msg_time DESC, cg.id ASC`
 
 const getLobbyGroupsSQL = `
-SELECT cg.id, cg.title, COALESCE(gu_count.cnt, 0)::int AS member_count
+SELECT cg.id, cg.title, COALESCE(gu_count.cnt, 0)::int AS member_count,
+       CASE WHEN cg.cover_filename = '' OR cg.cover_filename IS NULL
+            THEN ''
+            ELSE '/static/group-covers/' || cg.cover_filename
+       END AS cover_url
 FROM chat_group cg
 LEFT JOIN (
     SELECT group_id, COUNT(*) AS cnt
@@ -236,7 +244,11 @@ const MyGroupPageSize = 20
 const getMyGroupsPagedSQL = `
 SELECT cg.id, cg.title, cg.code, cg.open_join,
        COALESCE(lr.content, '') AS last_msg,
-       COALESCE(lr.create_time, 0) AS last_msg_time
+       COALESCE(lr.create_time, 0) AS last_msg_time,
+       CASE WHEN cg.cover_filename = '' OR cg.cover_filename IS NULL
+            THEN ''
+            ELSE '/static/group-covers/' || cg.cover_filename
+       END AS cover_url
 FROM chat_group cg
 JOIN group_user gu ON gu.group_id = cg.id
     AND gu.user_id = $1
@@ -281,6 +293,19 @@ func GetMyGroupsPaged(userID int64, page int32) ([]protocol.DisplayUserGroup, er
 		return nil, err
 	}
 	return rows, nil
+}
+
+func UpdateCoverFilename(groupID int64, filename string) error {
+	d, err := db.GetDBConn()
+	if err != nil {
+		return err
+	}
+	_, err = d.Builder.
+		Update("chat_group").
+		Set("cover_filename", filename).
+		Where(sq.Eq{"id": groupID}).
+		RunWith(d.DB).Exec()
+	return err
 }
 
 func GetMyGroups(userID int64) ([]protocol.DisplayUserGroup, error) {

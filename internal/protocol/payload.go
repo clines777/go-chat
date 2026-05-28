@@ -33,12 +33,13 @@ type LoginResp struct {
 }
 
 type DisplayUserGroup struct {
-	Id            int64  `db:"id"             json:"id"`
-	Title         string `db:"title"          json:"title"`
-	Code          string `db:"code"           json:"code"`
-	OpenJoin    bool   `db:"open_join"  json:"open_join"`
-	LastMsg     string `db:"last_msg"   json:"last_msg"`
-	LastMsgTime   int64  `db:"last_msg_time" json:"last_msg_time"`
+	Id          int64  `db:"id"           json:"id"`
+	Title       string `db:"title"        json:"title"`
+	Code        string `db:"code"         json:"code"`
+	OpenJoin    bool   `db:"open_join"    json:"open_join"`
+	LastMsg     string `db:"last_msg"     json:"last_msg"`
+	LastMsgTime int64  `db:"last_msg_time" json:"last_msg_time"`
+	CoverURL    string `db:"cover_url"    json:"cover_url"`
 }
 
 type EnterLobbyReq struct {
@@ -49,6 +50,7 @@ type DisplayLobbyGroup struct {
 	Id          int64  `db:"id"           json:"id"`
 	Title       string `db:"title"        json:"title"`
 	MemberCount int32  `db:"member_count" json:"member_count"`
+	CoverURL    string `db:"cover_url"    json:"cover_url"`
 }
 
 type EnterLobbyResp struct {
@@ -123,6 +125,7 @@ type GroupInfoResp struct {
 	OwnerUserID   int64  `json:"owner_user_id"`
 	Code          string `json:"code"`
 	Remark        string `json:"remark"`
+	CoverURL      string `json:"cover_url"`
 }
 
 func NewErrPayload(errCode int, remark string, origin *Payload) *Payload {

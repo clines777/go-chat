@@ -23,6 +23,7 @@ type Client struct {
 	ConnID string
 	Conn   *websocket.Conn
 	Send   chan []byte
+	UserId int64
 }
 
 func NewClient(conn *websocket.Conn) *Client {
@@ -81,8 +82,8 @@ var hub = struct {
 
 func Register(c *Client) {
 	hub.mu.Lock()
+	defer hub.mu.Unlock()
 	hub.clients[c.ConnID] = c
-	hub.mu.Unlock()
 }
 
 func Unregister(connID string) {
