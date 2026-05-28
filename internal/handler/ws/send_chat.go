@@ -26,7 +26,7 @@ func SendChat(ctx *ws.Ctx) *protocol.Payload {
 		return protocol.NewErrPayload(protocol.ErrInvalidParam, "not in group", ctx.Payload)
 	}
 
-	g, err := group.FindByID(int64(req.GroupId))
+	g, err := group.FindByID(req.GroupId)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return protocol.NewErrPayload(protocol.ErrorNotFound, "group not found", ctx.Payload)

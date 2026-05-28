@@ -7,19 +7,23 @@ type GetTokenReq struct {
 }
 
 type GetUserInfoReq struct {
-	UserId int64 `form:"user_id"`
+	UserId int `form:"user_id"`
 }
 
 type GetGroupInfoReq struct {
-	GroupID int64 `form:"group_id"`
+	GroupID int `form:"group_id"`
 }
 
 type ApiTokenPayload struct {
-	UserID int64 `json:"user_id"`
+	UserID int `json:"user_id"`
 }
 
 type JoinGroupReq struct {
-	GroupID int64 `json:"group_id" binding:"required"`
+	GroupID int `json:"group_id" binding:"required"`
+}
+
+type LeaveGroupReq struct {
+	GroupID int `json:"group_id" binding:"required"`
 }
 
 type CreateGroupReq struct {
@@ -31,7 +35,7 @@ type CreateGroupReq struct {
 }
 
 type SetAvatarReq struct {
-	AvatarId int32 `json:"avatar_id" binding:"required"`
+	AvatarId int `json:"avatar_id" binding:"required"`
 }
 
 type ResumeReq struct {
@@ -39,6 +43,6 @@ type ResumeReq struct {
 }
 
 type ResumeTokenPayload struct {
-	UserID   int64  `json:"user_id"`
+	UserID   int    `json:"user_id"`
 	Username string `json:"username"`
 }

@@ -14,7 +14,7 @@ import (
 )
 
 type avatarResp struct {
-	ID  int64  `json:"id"`
+	ID  int    `json:"id"`
 	URL string `json:"url"`
 }
 
@@ -41,7 +41,7 @@ func SetAvatar(c *gin.Context) {
 		return
 	}
 
-	userID := c.MustGet("user_id").(int64)
+	userID := c.MustGet("user_id").(int)
 
 	if err := user.UpdateAvatar(userID, req.AvatarId); err != nil {
 		log.Printf("[SetAvatar] UpdateAvatar user=%d avatar=%d error: %v", userID, req.AvatarId, err)

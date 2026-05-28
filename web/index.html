@@ -165,6 +165,20 @@
     }
     .user-meta .ustatus { font-size: 11px; color: var(--green); margin-top: 1px; }
 
+    .logout-btn {
+      margin-left: 4px;
+      background: none;
+      border: none;
+      color: var(--subtext);
+      font-size: 16px;
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 6px;
+      line-height: 1;
+      transition: color .15s, background .15s;
+      flex-shrink: 0;
+    }
+    .logout-btn:hover { color: #e05252; background: rgba(224,82,82,.1); }
     .icon-btn {
       background: none; border: none;
       color: var(--muted); cursor: pointer;
@@ -655,6 +669,26 @@
     }
     .ip-cover:hover .cover-change-btn { opacity: 1; }
     .cover-uploading .cover-change-btn { opacity: 1; cursor: default; }
+
+    /* ── Leave group button ── */
+    .ip-leave-btn {
+      margin-top: auto;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+    .leave-btn {
+      width: 100%;
+      padding: 8px 0;
+      border: 1px solid #e05252;
+      border-radius: 8px;
+      background: transparent;
+      color: #e05252;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+    .leave-btn:hover { background: #e05252; color: #fff; }
   </style>
 </head>
 <body>
@@ -698,6 +732,7 @@
           <div class="ustatus">● 已連線</div>
         </div>
         <button class="icon-btn" title="個人設定">⚙</button>
+        <button class="logout-btn" title="登出" @click.stop="logout">⏻</button>
       </div>
 
       <div class="tab-bar">
@@ -854,6 +889,10 @@
       <div class="ip-section" v-if="groupInfo.remark">
         <div class="ip-label">備註</div>
         <div class="ip-value">{{ groupInfo.remark }}</div>
+      </div>
+
+      <div v-if="!isGroupOwner" class="ip-leave-btn">
+        <button class="leave-btn" @click="leaveGroup">離開群組</button>
       </div>
     </aside>
   </div>
@@ -1101,6 +1140,44 @@ createApp({
             currentGroup.chats.push(normalizeLive(data));
             scrollToBottom();
           }
+          break;
+
+        case 'join_group_ok':
+          currentGroup.id          = data.group_id;
+          currentGroup.title       = data.title;
+          currentGroup.memberCount = data.group_user_count;
+          currentGroup.chats       = (data.chats || []).map(normalizeHistory);
+          currentGroupId.value     = data.group_id;
+          if (!myGroupIds.value.has(data.group_id)) {
+            myGroups.value.push({
+              id: data.group_id, title: data.title,
+              code: '', open_join: true,
+              last_msg: '', last_msg_time: 0, cover_url: '',
+            });
+          }
+          scrollToBottom();
+          loadGroupInfo(data.group_id);
+          showToast('成功加入群組 ✓');
+          break;
+
+        case 'leave_group_ok': {
+          const leftId = data.group_id;
+          myGroups.value = myGroups.value.filter(g => g.id !== leftId);
+          if (currentGroupId.value === leftId) {
+            currentGroupId.value = null;
+            currentGroup.id      = null;
+            currentGroup.title   = '';
+            currentGroup.chats   = [];
+            Object.assign(groupInfo, { title: '', userTotal: 0, bulletin: '', ownerUsername: '', ownerUserID: 0, code: '', remark: '', coverUrl: '' });
+          }
+          showToast('已離開群組');
+          break;
+        }
+
+        case 'logout_ok':
+          wsConn?.close();
+          wsConn = null;
+          resetToLogin();
           break;
 
         case 'send_chat_ok':
@@ -1380,26 +1457,37 @@ createApp({
 
     // ── Join group ──
 
-    async function joinGroup(groupId) {
-      try {
-        const res  = await fetch('/api/group/join', {
-          method: 'POST',
-          headers: {
-            'Content-Type':  'application/json',
-            Authorization: `Bearer ${user.apiToken}`,
-          },
-          body: JSON.stringify({ group_id: groupId }),
-        });
-        const json = await res.json();
-        if (json.code === 0) {
-          showToast('成功加入群組 ✓');
-          enterGroup(groupId);
-        } else {
-          showToast(json.msg || '加入失敗');
-        }
-      } catch {
-        showToast('加入群組失敗');
-      }
+    function joinGroup(groupId) {
+      wsSend('join_group', { group_id: groupId });
+    }
+
+    // ── Leave group ──
+
+    function leaveGroup() {
+      if (!currentGroupId.value) return;
+      if (!confirm('確定要離開此群組嗎？')) return;
+      wsSend('leave_group', { group_id: currentGroupId.value });
+    }
+
+    // ── Logout ──
+
+    function logout() {
+      wsSend('logout', { resume_token: user.resumeToken });
+    }
+
+    function resetToLogin() {
+      clearSession();
+      view.value           = 'login';
+      connecting.value     = false;
+      loginError.value     = '';
+      currentGroupId.value = null;
+      myGroups.value       = [];
+      lobbyGroups.value    = [];
+      currentGroup.id      = null;
+      currentGroup.title   = '';
+      currentGroup.chats   = [];
+      Object.assign(user, { id: 0, username: '', apiToken: '', resumeToken: '', avatarUrl: '' });
+      Object.assign(groupInfo, { title: '', userTotal: 0, bulletin: '', ownerUsername: '', ownerUserID: 0, code: '', remark: '', coverUrl: '' });
     }
 
     // 頁面載入時嘗試自動重連
@@ -1414,7 +1502,7 @@ createApp({
       groupInfo, isGroupOwner,
       coverUploading, coverFileInputRef,
       doLogin, switchTab, enterGroup, sendChat, formatTime,
-      openProfile, setAvatar, joinGroup,
+      openProfile, setAvatar, joinGroup, leaveGroup, logout,
       openCreateGroup, submitCreateGroup,
       copyCode,
       triggerCoverUpload, handleCoverUpload,

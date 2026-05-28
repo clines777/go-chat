@@ -49,7 +49,7 @@ func RefreshResumeToken(token string) {
 	_ = redis.GetRedis().Expire(protocol.ResumeTokenKey(token), resumeTokenTTL)
 }
 
-func GenerateApiToken(userID int64) (string, error) {
+func GenerateApiToken(userID int) (string, error) {
 	b := make([]byte, 16)
 	if _, err := rand.Read(b); err != nil {
 		return "", err
@@ -139,7 +139,7 @@ func findUser(username string) (*model.User, error) {
 
 var userColumns = []string{"id", "username", "nickname", "code", "is_suspended", "avatar_id", "create_time"}
 
-func FindByID(userID int64) (*model.User, error) {
+func FindByID(userID int) (*model.User, error) {
 	d, err := db.GetDBConn()
 	if err != nil {
 		return nil, err
@@ -171,7 +171,7 @@ func createUser(tokenInfo *protocol.GetTokenReq, userCode string) (*model.User, 
 	}
 
 	now := time.Now().Unix()
-	var id int64
+	var id int
 	err = d.Builder.
 		Insert(`"user"`).
 		Columns("username", "code", "last_login_time", "create_time", "update_time").
@@ -187,12 +187,12 @@ func createUser(tokenInfo *protocol.GetTokenReq, userCode string) (*model.User, 
 		ID:         id,
 		Username:   tokenInfo.Username,
 		Code:       userCode,
-		CreateTime: now,
-		UpdateTime: now,
+		CreateTime: int(now),
+		UpdateTime: int(now),
 	}, nil
 }
 
-func UpdateAvatar(userID int64, avatarID int32) error {
+func UpdateAvatar(userID int, avatarID int) error {
 	d, err := db.GetDBConn()
 	if err != nil {
 		return err
@@ -224,7 +224,7 @@ func updateUser(u *model.User) (*model.User, error) {
 		return nil, err
 	}
 
-	u.LastLoginTime = now
+	u.LastLoginTime = int(now)
 
 	return u, nil
 }

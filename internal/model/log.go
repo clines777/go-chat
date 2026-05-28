@@ -5,7 +5,7 @@ import (
 )
 
 type Log struct {
-	ID   int64           `db:"id,omitempty" json:"id"`
-	Type int32           `db:"type,omitempty" json:"type"`
+	ID   int             `db:"id,omitempty" json:"id"`
+	Type int             `db:"type,omitempty" json:"type"`
 	Info json.RawMessage `db:"info,omitempty" json:"info,omitempty"`
 }

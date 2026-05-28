@@ -27,7 +27,7 @@ func EnterLobby(ctx *ws.Ctx) *protocol.Payload {
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
 	}
 
-	ws.LeaveAllGroups(ctx.Client.ConnID)
+	ws.ResetGroupScene(ctx.Client.ConnID)
 
 	sess.Scene = protocol.SceneLobby
 	sess.InGroupID = 0

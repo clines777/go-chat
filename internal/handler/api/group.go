@@ -51,66 +51,14 @@ func GetGroupInfo(c *gin.Context) {
 
 	c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorNone, "OK", &protocol.GroupInfoResp{
 		Title:         g.Title,
-		UserTotal:     int32(count),
+		UserTotal:     count,
 		Bulletin:      g.Bulletin,
 		OwnerUsername: g.OwnerUserName,
-		OwnerUserID:   int64(g.OwnerUserID),
+		OwnerUserID:   g.OwnerUserID,
 		Code:          g.Code,
 		Remark:        g.Remark,
 		CoverURL:      coverURL,
 	}).H())
-}
-
-// JoinGroup - 用戶加入群組
-func JoinGroup(c *gin.Context) {
-	var req protocol.JoinGroupReq
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrWrongParam, "參數錯誤", nil).H())
-		return
-	}
-
-	userID := c.MustGet("user_id").(int64)
-
-	u, err := user.FindByID(userID)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrUserNotFound, "用戶不存在", nil).H())
-		} else {
-			log.Printf("[JoinGroup] FindByID user=%d error: %v", userID, err)
-			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorUnknown, "系統錯誤", nil).H())
-		}
-		return
-	}
-
-	g, err := group.FindByID(req.GroupID)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorNotFound, "群組不存在", nil).H())
-		} else {
-			log.Printf("[JoinGroup] FindByID group=%d error: %v", req.GroupID, err)
-			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorUnknown, "系統錯誤", nil).H())
-		}
-		return
-	}
-
-	if err := group.Join(u, g); err != nil {
-		switch {
-		case errors.Is(err, group.ErrAlreadyMember):
-			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrInvalidParam, "已是群組成員", nil).H())
-		case errors.Is(err, group.ErrGroupFull):
-			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrInvalidParam, "群組已達人數上限", nil).H())
-		case errors.Is(err, group.ErrGroupNotOpen):
-			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrInvalidParam, "群組未開放加入", nil).H())
-		case errors.Is(err, group.ErrGroupDismissed):
-			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrInvalidParam, "群組已解散", nil).H())
-		default:
-			log.Printf("[JoinGroup] Join user=%d group=%d error: %v", userID, req.GroupID, err)
-			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorUnknown, "系統錯誤", nil).H())
-		}
-		return
-	}
-
-	c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorNone, "OK", nil).H())
 }
 
 // CreateGroup - 創建群組
@@ -121,7 +69,7 @@ func CreateGroup(c *gin.Context) {
 		return
 	}
 
-	userID := c.MustGet("user_id").(int64)
+	userID := c.MustGet("user_id").(int)
 
 	owner, err := user.FindByID(userID)
 	if err != nil {
@@ -158,13 +106,13 @@ func UploadGroupCover(c *gin.Context) {
 		return
 	}
 
-	groupID, err := strconv.ParseInt(c.PostForm("group_id"), 10, 64)
+	groupID, err := strconv.Atoi(c.PostForm("group_id"))
 	if err != nil || groupID == 0 {
 		c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrWrongParam, "參數錯誤", nil).H())
 		return
 	}
 
-	userID := c.MustGet("user_id").(int64)
+	userID := c.MustGet("user_id").(int)
 
 	membership, err := group.GetMembership(userID, groupID)
 	if err != nil {

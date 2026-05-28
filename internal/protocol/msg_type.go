@@ -49,4 +49,8 @@ const (
 	UserQuitCast     Type = "user_quit_cast"
 	Resume           Type = "resume"
 	ResumeOK         Type = "resume_ok"
+	JoinGroup        Type = "join_group"
+	JoinGroupOK      Type = "join_group_ok"
+	Logout           Type = "logout"
+	LogoutOK         Type = "logout_ok"
 )

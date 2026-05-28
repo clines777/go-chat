@@ -17,6 +17,8 @@ var (
 	ErrGroupNotOpen   = errors.New("group is not open to join")
 	ErrGroupFull      = errors.New("group is full")
 	ErrAlreadyMember  = errors.New("already a member")
+	ErrIsOwner        = errors.New("owner cannot leave the group")
+	ErrNotMember      = errors.New("not a member")
 )
 
 const (
@@ -30,7 +32,7 @@ func genCode() string {
 	return strings.ToUpper(hex.EncodeToString(b))
 }
 
-func Create(req *protocol.CreateGroupReq, owner *model.User) (int64, string, error) {
+func Create(req *protocol.CreateGroupReq, owner *model.User) (int, string, error) {
 	d, err := db.GetDBConn()
 	if err != nil {
 		return 0, "", err
@@ -46,7 +48,7 @@ func Create(req *protocol.CreateGroupReq, owner *model.User) (int64, string, err
 		return 0, "", err
 	}
 
-	var groupID int64
+	var groupID int
 	err = d.Builder.
 		Insert("chat_group").
 		Columns("title", "code", "open_join", "user_limit", "bulletin",
@@ -81,7 +83,7 @@ func Create(req *protocol.CreateGroupReq, owner *model.User) (int64, string, err
 	return groupID, code, nil
 }
 
-func GetMembership(userID int64, groupID int64) (*model.GroupUser, error) {
+func GetMembership(userID int, groupID int) (*model.GroupUser, error) {
 	d, err := db.GetDBConn()
 	if err != nil {
 		return nil, err
@@ -101,7 +103,7 @@ func GetMembership(userID int64, groupID int64) (*model.GroupUser, error) {
 	return &gu, nil
 }
 
-func GetMemberCount(groupID int64) (int, error) {
+func GetMemberCount(groupID int) (int, error) {
 	d, err := db.GetDBConn()
 	if err != nil {
 		return 0, err
@@ -122,7 +124,7 @@ var groupColumns = []string{
 	"bulletin", "remark", "visible", "cover_filename",
 }
 
-func FindByID(groupID int64) (*model.ChatGroup, error) {
+func FindByID(groupID int) (*model.ChatGroup, error) {
 	d, err := db.GetDBConn()
 	if err != nil {
 		return nil, err
@@ -165,8 +167,8 @@ func Join(u *model.User, g *model.ChatGroup) error {
 	}
 
 	var existing struct {
-		ID      int64 `db:"id"`
-		Deleted bool  `db:"deleted"`
+		ID      int  `db:"id"`
+		Deleted bool `db:"deleted"`
 	}
 	querySql, args, _ := d.Builder.
 		Select("id", "deleted").
@@ -263,7 +265,7 @@ WHERE cg.is_dismiss = false
 ORDER BY last_msg_time DESC, cg.id ASC
 LIMIT $2 OFFSET $3`
 
-func GetLobbyGroups(page int32) ([]protocol.DisplayLobbyGroup, error) {
+func GetLobbyGroups(page int) ([]protocol.DisplayLobbyGroup, error) {
 	d, err := db.GetDBConn()
 	if err != nil {
 		return nil, err
@@ -279,7 +281,7 @@ func GetLobbyGroups(page int32) ([]protocol.DisplayLobbyGroup, error) {
 	return rows, nil
 }
 
-func GetMyGroupsPaged(userID int64, page int32) ([]protocol.DisplayUserGroup, error) {
+func GetMyGroupsPaged(userID int, page int) ([]protocol.DisplayUserGroup, error) {
 	d, err := db.GetDBConn()
 	if err != nil {
 		return nil, err
@@ -295,7 +297,7 @@ func GetMyGroupsPaged(userID int64, page int32) ([]protocol.DisplayUserGroup, er
 	return rows, nil
 }
 
-func UpdateCoverFilename(groupID int64, filename string) error {
+func UpdateCoverFilename(groupID int, filename string) error {
 	d, err := db.GetDBConn()
 	if err != nil {
 		return err
@@ -308,7 +310,40 @@ func UpdateCoverFilename(groupID int64, filename string) error {
 	return err
 }
 
-func GetMyGroups(userID int64) ([]protocol.DisplayUserGroup, error) {
+func Leave(userID, groupID int) error {
+	d, err := db.GetDBConn()
+	if err != nil {
+		return err
+	}
+
+	var gu model.GroupUser
+	querySql, args, _ := d.Builder.
+		Select("id", "role_type", "deleted").
+		From("group_user").
+		Where(sq.Eq{"user_id": userID, "group_id": groupID}).
+		Limit(1).ToSql()
+
+	if err := d.DB.Get(&gu, querySql, args...); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotMember
+		}
+		return err
+	}
+	if gu.Deleted {
+		return ErrNotMember
+	}
+	if gu.RoleType == RoleOwner {
+		return ErrIsOwner
+	}
+
+	_, err = d.Builder.Update("group_user").
+		Set("deleted", true).
+		Where(sq.Eq{"id": gu.ID}).
+		RunWith(d.DB).Exec()
+	return err
+}
+
+func GetMyGroups(userID int) ([]protocol.DisplayUserGroup, error) {
 	d, err := db.GetDBConn()
 	if err != nil {
 		return nil, err
