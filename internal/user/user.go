@@ -13,8 +13,6 @@ import (
 	"time"
 )
 
-const ResumeTokenTTL = 60 * 60 * 1
-
 func GenerateResumeToken(u *model.User) (string, error) {
 	b := make([]byte, 16)
 	if _, err := rand.Read(b); err != nil {
@@ -25,7 +23,7 @@ func GenerateResumeToken(u *model.User) (string, error) {
 		UserID:   u.ID,
 		Username: u.Username,
 	}
-	if err := redis.GetRedis().SetJSON(protocol.ResumeTokenKey(token), tokenInfo, ResumeTokenTTL); err != nil {
+	if err := redis.GetRedis().SetJSON(protocol.ResumeTokenKey(token), tokenInfo, protocol.ResumeTokenTTL); err != nil {
 		return "", err
 	}
 	return token, nil
@@ -44,7 +42,7 @@ func GetResumeToken(token string) (*protocol.ResumeTokenInfo, error) {
 }
 
 func RefreshResumeToken(token string) {
-	_ = redis.GetRedis().Expire(protocol.ResumeTokenKey(token), ResumeTokenTTL)
+	_ = redis.GetRedis().Expire(protocol.ResumeTokenKey(token), protocol.ResumeTokenTTL)
 }
 
 func GenerateApiToken(userID int) (string, error) {
@@ -53,8 +51,8 @@ func GenerateApiToken(userID int) (string, error) {
 		return "", err
 	}
 	token := hex.EncodeToString(b)
-	payload := protocol.ApiTokenPayload{UserID: userID}
-	if err := redis.GetRedis().SetJSON(protocol.ApiTokenKey(token), payload, 24*time.Hour); err != nil {
+	payload := protocol.ApiTokenInfo{UserID: userID}
+	if err := redis.GetRedis().SetJSON(protocol.ApiTokenKey(token), payload, protocol.ApiTokenTTL); err != nil {
 		return "", err
 	}
 	return token, nil

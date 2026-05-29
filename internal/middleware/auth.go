@@ -18,14 +18,14 @@ func Auth() gin.HandlerFunc {
 			return
 		}
 
-		var payload protocol.ApiTokenPayload
-		found, err := redis.GetRedis().GetJSON(protocol.ApiTokenKey(token), &payload)
-		if err != nil || !found || payload.UserID == 0 {
+		var info protocol.ApiTokenInfo
+		found, err := redis.GetRedis().GetJSON(protocol.ApiTokenKey(token), &info)
+		if err != nil || !found || info.UserID == 0 {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, protocol.NewApiResponse(protocol.ErrUnauthorized, "unauthorized", nil).H())
 			return
 		}
 
-		c.Set("user_id", payload.UserID)
+		c.Set("user_id", info.UserID)
 		c.Next()
 	}
 }

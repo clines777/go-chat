@@ -1,13 +1,19 @@
 package protocol
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 const (
-	tokenPrefix = "token"
-	loginToken  = "t_login"
-	apiToken    = "t_api"
-	resumeToken = "t_resume"
-	session     = "session"
+	tokenPrefix    = "token"
+	loginToken     = "t_login"
+	apiToken       = "t_api"
+	resumeToken    = "t_resume"
+	session        = "session"
+	ResumeTokenTTL = 24 * time.Hour
+	ApiTokenTTL    = 1 * time.Hour
+	SessionTTL     = 1 * time.Hour
 )
 
 func LoginTokenKey(token string) string {

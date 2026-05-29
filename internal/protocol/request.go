@@ -14,7 +14,7 @@ type GetGroupInfoReq struct {
 	GroupID int `form:"group_id"`
 }
 
-type ApiTokenPayload struct {
+type ApiTokenInfo struct {
 	UserID int `json:"user_id"`
 }
 

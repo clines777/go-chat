@@ -65,9 +65,9 @@ func (c *Client) WritePump() {
 				return
 			}
 			r := redis.GetRedis()
-			_ = r.Expire(protocol.SessionKey(c.UserId, c.ConnID), 1*time.Hour)
+			_ = r.Expire(protocol.SessionKey(c.UserId, c.ConnID), protocol.SessionTTL)
 			if c.ApiToken != "" {
-				_ = r.Expire(protocol.ApiTokenKey(c.ApiToken), 24*time.Hour)
+				_ = r.Expire(protocol.ApiTokenKey(c.ApiToken), protocol.ApiTokenTTL)
 			}
 		}
 	}
