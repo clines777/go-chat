@@ -58,7 +58,7 @@ func Resume(ctx *ws.Ctx) *protocol.Payload {
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
 	}
 
-	//意外斷線後跳回我的群組
+	//這裡先不考慮複雜的恢復策略, 意外斷線後重設session並固定跳回我的群組即可.
 	sess := &session.Session{
 		ConnID:   ctx.Client.ConnID,
 		UserID:   tokenPayload.UserID,

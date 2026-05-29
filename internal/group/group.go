@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"errors"
+	"time"
+
 	sq "github.com/Masterminds/squirrel"
 	"gochat/internal/infra/db"
 	"gochat/internal/model"
@@ -339,6 +341,21 @@ func Leave(userID, groupID int) error {
 	_, err = d.Builder.Update("group_user").
 		Set("deleted", true).
 		Where(sq.Eq{"id": gu.ID}).
+		RunWith(d.DB).Exec()
+	return err
+}
+
+func UpdateLastRead(userID, groupID, chatID int) error {
+	d, err := db.GetDBConn()
+	if err != nil {
+		return err
+	}
+	_, err = d.Builder.
+		Update("group_user").
+		Set("last_read_chat_id", chatID).
+		Set("update_time", time.Now().Unix()).
+		Where(sq.Eq{"user_id": userID, "group_id": groupID, "deleted": false}).
+		Where("last_read_chat_id < ?", chatID).
 		RunWith(d.DB).Exec()
 	return err
 }

@@ -2,8 +2,10 @@ package ws
 
 import (
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"sync"
 	"time"
 
@@ -19,12 +21,71 @@ const (
 	writeTimeout = 10 * time.Second
 )
 
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+	CheckOrigin:     func(r *http.Request) bool { return true },
+}
+
 type Client struct {
 	ConnID   string
 	Conn     *websocket.Conn
 	Send     chan []byte
 	UserId   int
 	ApiToken string
+}
+
+func HandleWs(w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Printf("[WS] upgrade error: %v", err)
+		return
+	}
+
+	client := NewClient(conn)
+	go client.WritePump()
+
+	conn.SetPongHandler(func(string) error {
+		_ = conn.SetReadDeadline(time.Now().Add(PongWait))
+		return nil
+	})
+
+	for {
+		mt, input, err := conn.ReadMessage()
+		if err != nil {
+			log.Printf("[WS] read error: %v", err)
+			close(client.Send)
+			return
+		}
+		if mt != websocket.TextMessage {
+			Unregister(client.ConnID)
+			close(client.Send)
+			client.Conn.Close()
+			return
+		}
+
+		output, dispatchErr := Default.Dispatch(client, input)
+		if dispatchErr != nil {
+			var de *protocol.DispatchError
+			if errors.As(dispatchErr, &de) && de.Fatal {
+				Unregister(client.ConnID)
+				client.Conn.Close()
+				close(client.Send)
+				return
+			}
+			continue
+		}
+
+		if len(output) > 0 {
+			select {
+			case client.Send <- output:
+			default:
+				Unregister(client.ConnID)
+				close(client.Send)
+				return
+			}
+		}
+	}
 }
 
 func NewClient(conn *websocket.Conn) *Client {

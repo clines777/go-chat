@@ -6,7 +6,7 @@ import (
 )
 
 type Payload struct {
-	MsgType Type            `json:"msg_type"`
+	MsgType MsgType         `json:"msg_type"`
 	ErrCode int             `json:"err_code,omitempty"`
 	Remark  string          `json:"remark,omitempty"`
 	Data    json.RawMessage `json:"data,omitempty"`

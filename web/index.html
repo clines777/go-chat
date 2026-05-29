@@ -1133,12 +1133,17 @@ createApp({
           currentGroup.chats       = (data.chats || []).map(normalizeHistory);
           currentGroupId.value     = data.group_id;
           scrollToBottom();
+          if (data.chats?.length) {
+            const lastId = data.chats[data.chats.length - 1].ID;
+            if (lastId) wsSend('update_last_read', { group_id: data.group_id, chat_id: lastId });
+          }
           break;
 
         case 'cast_chat':
           if (data && data.group_id === currentGroup.id) {
             currentGroup.chats.push(normalizeLive(data));
             scrollToBottom();
+            wsSend('update_last_read', { group_id: data.group_id, chat_id: data.id });
           }
           break;
 
