@@ -21,7 +21,7 @@ type Route struct {
 }
 
 type Dispatcher struct {
-	routes map[protocol.Type]*Route
+	routes map[protocol.MsgType]*Route
 	mu     sync.RWMutex
 }
 
@@ -29,11 +29,11 @@ var Default = NewDispatcher()
 
 func NewDispatcher() *Dispatcher {
 	return &Dispatcher{
-		routes: map[protocol.Type]*Route{},
+		routes: map[protocol.MsgType]*Route{},
 	}
 }
 
-func (d *Dispatcher) Register(msgType protocol.Type, route *Route) {
+func (d *Dispatcher) Register(msgType protocol.MsgType, route *Route) {
 	d.mu.Lock()
 	d.routes[msgType] = route
 	d.mu.Unlock()

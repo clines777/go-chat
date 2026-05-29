@@ -46,3 +46,8 @@ type ResumeTokenInfo struct {
 	UserID   int    `json:"user_id"`
 	Username string `json:"username"`
 }
+
+type UpdateLastReadReq struct {
+	GroupID int `json:"group_id"`
+	ChatID  int `json:"chat_id"`
+}
