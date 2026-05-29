@@ -2,13 +2,11 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"strconv"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"gochat/internal/chat"
 	"gochat/internal/handler/api"
 	_ "gochat/internal/handler/ws"
 	"gochat/internal/infra"
@@ -61,22 +59,8 @@ func main() {
 	log.Println("[NATS] check success")
 
 	serverName := infra.GetEnvConfig().ServerName
-	if err := natsClient.SubscribeGroupChat(serverName, func(subject string, data []byte) {
-		parts := strings.Split(subject, ".")
-		if len(parts) != 3 {
-			return
-		}
-		gid, err := strconv.Atoi(parts[2])
-		if err != nil {
-			return
-		}
-		wsMsg, err := json.Marshal(&protocol.Payload{MsgType: protocol.CastChat, Data: data})
-		if err != nil {
-			return
-		}
-		ws.BroadcastToGroup(gid, wsMsg)
-	}); err != nil {
-		log.Fatalf("nats subscribe failed: %v", err)
+	if err := chat.StartGroupChatConsumer(serverName); err != nil {
+		log.Fatalf("nats consumer start failed: %v", err)
 	}
 
 	r := gin.New()
