@@ -60,7 +60,7 @@ func SendChat(ctx *ws.Ctx) *protocol.Payload {
 		CreateTime: record.CreateTime,
 	}
 
-	subject := fmt.Sprintf("chat.group.%d", event.GroupId)
+	subject := fmt.Sprintf("group.chat.%d", event.GroupId)
 	if err = infranats.Publish(subject, event); err != nil {
 		log.Printf("[SendChat] Publish event=%+v error: %v", event, err)
 	}
