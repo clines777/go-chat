@@ -41,8 +41,8 @@ func GetResumeToken(token string) (*protocol.ResumeTokenInfo, error) {
 	return &payload, nil
 }
 
-func RefreshResumeToken(token string) {
-	_ = redis.GetRedis().Expire(protocol.ResumeTokenKey(token), protocol.ResumeTokenTTL)
+func DeleteResumeToken(token string) {
+	_ = redis.GetRedis().Del(protocol.ResumeTokenKey(token))
 }
 
 func GenerateApiToken(userID int) (string, error) {
@@ -207,4 +207,24 @@ func updateUser(u *model.User) (*model.User, error) {
 	u.LastLoginTime = int(now)
 
 	return u, nil
+}
+
+func Exists(userId int) bool {
+	d, err := db.GetDBConn()
+	if err != nil {
+		return false
+	}
+
+	var count int
+	err = d.Builder.Select("1").
+		From(`"user"`).
+		Where("user.id = ?", userId).
+		Limit(1).
+		QueryRow().Scan(&count)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return false
+	}
+
+	return err != nil
 }

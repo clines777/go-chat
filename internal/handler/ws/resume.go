@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"gochat/internal/group"
+	"gochat/internal/model"
 	"gochat/internal/protocol"
 	"gochat/internal/session"
 	"gochat/internal/user"
@@ -24,8 +25,14 @@ func Resume(ctx *ws.Ctx) *protocol.Payload {
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
 	}
 	if tokenPayload == nil {
-		log.Printf("[Resume] token not found or expired")
-		return protocol.NewErrPayload(protocol.ErrUnauthorized, "invalid or expired token", ctx.Payload)
+		log.Printf("[Resume] token not exists or expired")
+		return protocol.NewErrPayload(protocol.ErrUnauthorized, "invalid or expired resume token", ctx.Payload)
+	}
+
+	exists := user.Exists(tokenPayload.UserID)
+	if !exists {
+		log.Printf("[Resume] user not exists")
+		return protocol.NewErrPayload(protocol.ErrUserNotFound, "user not exists", ctx.Payload)
 	}
 
 	ctx.Client.UserId = tokenPayload.UserID
@@ -44,8 +51,14 @@ func Resume(ctx *ws.Ctx) *protocol.Payload {
 	}
 	ctx.Client.ApiToken = apiToken
 
-	user.RefreshResumeToken(req.Token)
+	user.DeleteResumeToken(req.Token)
+	newResumeToken, err := user.GenerateResumeToken(&model.User{ID: tokenPayload.UserID, Username: tokenPayload.Username})
+	if err != nil {
+		log.Printf("[Resume] GenerateResumeToken error: %v", err)
+		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
+	}
 
+	//意外斷線後跳回我的群組
 	sess := &session.Session{
 		ConnID:   ctx.Client.ConnID,
 		UserID:   tokenPayload.UserID,
@@ -62,7 +75,7 @@ func Resume(ctx *ws.Ctx) *protocol.Payload {
 		UserID:      tokenPayload.UserID,
 		Username:    tokenPayload.Username,
 		ApiToken:    apiToken,
-		ResumeToken: req.Token,
+		ResumeToken: newResumeToken,
 		UserGroups:  userGroups,
 	})
 	if err != nil {
