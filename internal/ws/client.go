@@ -20,10 +20,11 @@ const (
 )
 
 type Client struct {
-	ConnID string
-	Conn   *websocket.Conn
-	Send   chan []byte
-	UserId int
+	ConnID   string
+	Conn     *websocket.Conn
+	Send     chan []byte
+	UserId   int
+	ApiToken string
 }
 
 func NewClient(conn *websocket.Conn) *Client {
@@ -63,7 +64,11 @@ func (c *Client) WritePump() {
 				log.Printf("[WS] ping error: %v", err)
 				return
 			}
-			_ = redis.GetRedis().Expire(protocol.SessionKey(c.ConnID), 1*time.Hour)
+			r := redis.GetRedis()
+			_ = r.Expire(protocol.SessionKey(c.UserId, c.ConnID), protocol.SessionTTL)
+			if c.ApiToken != "" {
+				_ = r.Expire(protocol.ApiTokenKey(c.ApiToken), protocol.ApiTokenTTL)
+			}
 		}
 	}
 }
@@ -88,14 +93,21 @@ func Register(c *Client) {
 
 func Unregister(connID string) {
 	hub.mu.Lock()
+	c := hub.clients[connID]
 	delete(hub.clients, connID)
 	hub.mu.Unlock()
 
 	ResetGroupScene(connID)
-	_ = redis.GetRedis().Del(protocol.SessionKey(connID))
+	if c != nil {
+		r := redis.GetRedis()
+		_ = r.Del(protocol.SessionKey(c.UserId, connID))
+		if c.ApiToken != "" {
+			_ = r.Del(protocol.ApiTokenKey(c.ApiToken))
+		}
+	}
 }
 
-// groupSubs tracks which clients are currently viewing each group on this server.
+// groupSubs tracks which clients are currently viewing each group on one server.
 var groupSubs = struct {
 	byGroup map[int]map[string]*Client
 	byConn  map[string]int
@@ -135,20 +147,5 @@ func BroadcastToGroup(groupID int, data []byte) {
 
 	for _, c := range groupSubs.byGroup[groupID] {
 		c.TrySend(data)
-	}
-}
-
-func GetClient(connID string) (*Client, bool) {
-	hub.mu.RLock()
-	c, ok := hub.clients[connID]
-	hub.mu.RUnlock()
-	return c, ok
-}
-
-func Broadcast(msg []byte) {
-	hub.mu.RLock()
-	defer hub.mu.RUnlock()
-	for _, c := range hub.clients {
-		c.TrySend(msg)
 	}
 }

@@ -22,7 +22,7 @@ func EnterGroup(ctx *ws.Ctx) *protocol.Payload {
 		return protocol.NewErrPayload(protocol.ErrInvalidParam, "invalid request", ctx.Payload)
 	}
 
-	sess := session.Get(ctx.Client.ConnID)
+	sess := session.Get(ctx.Client.UserId, ctx.Client.ConnID)
 
 	_, err := group.GetMembership(sess.UserID, req.GroupID)
 	if err != nil {
@@ -52,7 +52,7 @@ func EnterGroup(ctx *ws.Ctx) *protocol.Payload {
 
 	sess.InGroupID = req.GroupID
 	sess.Scene = protocol.SceneInGroup
-	if err := session.Set(ctx.Client.ConnID, sess); err != nil {
+	if err := session.Set(ctx.Client.UserId, ctx.Client.ConnID, sess); err != nil {
 		log.Printf("[EnterGroup] session.Set error: %v", err)
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
 	}

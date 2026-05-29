@@ -10,12 +10,8 @@ import (
 	"gochat/internal/infra/redis"
 	"gochat/internal/model"
 	"gochat/internal/protocol"
-	"gochat/internal/session"
-	"gochat/internal/ws"
 	"time"
 )
-
-const resumeTokenTTL = 7 * 24 * time.Hour
 
 func GenerateResumeToken(u *model.User) (string, error) {
 	b := make([]byte, 16)
@@ -23,18 +19,18 @@ func GenerateResumeToken(u *model.User) (string, error) {
 		return "", err
 	}
 	token := hex.EncodeToString(b)
-	payload := protocol.ResumeTokenPayload{
+	tokenInfo := protocol.ResumeTokenInfo{
 		UserID:   u.ID,
 		Username: u.Username,
 	}
-	if err := redis.GetRedis().SetJSON(protocol.ResumeTokenKey(token), payload, resumeTokenTTL); err != nil {
+	if err := redis.GetRedis().SetJSON(protocol.ResumeTokenKey(token), tokenInfo, protocol.ResumeTokenTTL); err != nil {
 		return "", err
 	}
 	return token, nil
 }
 
-func GetResumeToken(token string) (*protocol.ResumeTokenPayload, error) {
-	var payload protocol.ResumeTokenPayload
+func GetResumeToken(token string) (*protocol.ResumeTokenInfo, error) {
+	var payload protocol.ResumeTokenInfo
 	ok, err := redis.GetRedis().GetJSON(protocol.ResumeTokenKey(token), &payload)
 	if err != nil {
 		return nil, err
@@ -45,8 +41,8 @@ func GetResumeToken(token string) (*protocol.ResumeTokenPayload, error) {
 	return &payload, nil
 }
 
-func RefreshResumeToken(token string) {
-	_ = redis.GetRedis().Expire(protocol.ResumeTokenKey(token), resumeTokenTTL)
+func DeleteResumeToken(token string) {
+	_ = redis.GetRedis().Del(protocol.ResumeTokenKey(token))
 }
 
 func GenerateApiToken(userID int) (string, error) {
@@ -55,8 +51,8 @@ func GenerateApiToken(userID int) (string, error) {
 		return "", err
 	}
 	token := hex.EncodeToString(b)
-	payload := protocol.ApiTokenPayload{UserID: userID}
-	if err := redis.GetRedis().SetJSON(protocol.ApiTokenKey(token), payload, 24*time.Hour); err != nil {
+	payload := protocol.ApiTokenInfo{UserID: userID}
+	if err := redis.GetRedis().SetJSON(protocol.ApiTokenKey(token), payload, protocol.ApiTokenTTL); err != nil {
 		return "", err
 	}
 	return token, nil
@@ -77,8 +73,7 @@ func GetLoginToken(req protocol.LoginReq) (*protocol.GetTokenReq, error) {
 	return &tokenUser, nil
 }
 
-func Login(c *ws.Ctx, tokenInfo *protocol.GetTokenReq) (*model.User, error) {
-
+func Login(tokenInfo *protocol.GetTokenReq) (*model.User, error) {
 	user, err := findUser(tokenInfo.Username)
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
@@ -92,19 +87,6 @@ func Login(c *ws.Ctx, tokenInfo *protocol.GetTokenReq) (*model.User, error) {
 	}
 
 	user, err = updateUser(user)
-	if err != nil {
-		return nil, err
-	}
-
-	sess := &session.Session{
-		ConnID:    c.Client.ConnID,
-		UserID:    user.ID,
-		Username:  user.Username,
-		InGroupID: 0,
-		Scene:     protocol.SceneMyGroup,
-	}
-
-	err = session.Set(c.Client.ConnID, sess)
 	if err != nil {
 		return nil, err
 	}
@@ -136,8 +118,6 @@ func findUser(username string) (*model.User, error) {
 
 	return &u, nil
 }
-
-var userColumns = []string{"id", "username", "nickname", "code", "is_suspended", "avatar_id", "create_time"}
 
 func FindByID(userID int) (*model.User, error) {
 	d, err := db.GetDBConn()
@@ -227,4 +207,24 @@ func updateUser(u *model.User) (*model.User, error) {
 	u.LastLoginTime = int(now)
 
 	return u, nil
+}
+
+func Exists(userId int) bool {
+	d, err := db.GetDBConn()
+	if err != nil {
+		return false
+	}
+
+	var count int
+	err = d.Builder.Select("1").
+		From(`"user"`).
+		Where("user.id = ?", userId).
+		Limit(1).
+		QueryRow().Scan(&count)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return false
+	}
+
+	return err != nil
 }

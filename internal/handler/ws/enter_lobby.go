@@ -19,7 +19,7 @@ func EnterLobby(ctx *ws.Ctx) *protocol.Payload {
 		}
 	}
 
-	sess := session.Get(ctx.Client.ConnID)
+	sess := session.Get(ctx.Client.UserId, ctx.Client.ConnID)
 
 	groups, err := group.GetLobbyGroups(req.Page)
 	if err != nil {
@@ -31,7 +31,7 @@ func EnterLobby(ctx *ws.Ctx) *protocol.Payload {
 
 	sess.Scene = protocol.SceneLobby
 	sess.InGroupID = 0
-	if err := session.Set(ctx.Client.ConnID, sess); err != nil {
+	if err := session.Set(ctx.Client.UserId, ctx.Client.ConnID, sess); err != nil {
 		log.Printf("[EnterLobby] session.Set error: %v", err)
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
 	}

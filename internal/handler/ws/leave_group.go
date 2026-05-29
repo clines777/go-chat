@@ -17,7 +17,7 @@ func LeaveGroup(ctx *ws.Ctx) *protocol.Payload {
 		return protocol.NewErrPayload(protocol.ErrInvalidParam, "invalid request", ctx.Payload)
 	}
 
-	sess := session.Get(ctx.Client.ConnID)
+	sess := session.Get(ctx.Client.UserId, ctx.Client.ConnID)
 
 	if err := group.Leave(sess.UserID, req.GroupID); err != nil {
 		switch {
@@ -35,7 +35,7 @@ func LeaveGroup(ctx *ws.Ctx) *protocol.Payload {
 
 	sess.InGroupID = 0
 	sess.Scene = protocol.SceneMyGroup
-	if err := session.Set(ctx.Client.ConnID, sess); err != nil {
+	if err := session.Set(ctx.Client.UserId, ctx.Client.ConnID, sess); err != nil {
 		log.Printf("[LeaveGroup] session.Set error: %v", err)
 	}
 

@@ -12,23 +12,23 @@ type Session struct {
 	UserID    int            `json:"user_id"`
 	ConnID    string         `json:"conn_id"`
 	Username  string         `json:"username"`
+	ApiToken  string         `json:"api_token"`
 }
 
-func Get(connID string) *Session {
+func Get(userID int, connID string) *Session {
 	r := redis.GetRedis()
 	var sess Session
-	ok, err := r.GetJSON(protocol.SessionKey(connID), &sess)
+	ok, err := r.GetJSON(protocol.SessionKey(userID, connID), &sess)
 	if err != nil || !ok {
 		return nil
 	}
 	return &sess
 }
 
-func Set(connID string, sess *Session) error {
+func Set(userID int, connID string, sess *Session) error {
 	r := redis.GetRedis()
-	if err := r.SetJSON(protocol.SessionKey(connID), sess, 24*time.Hour); err != nil {
+	if err := r.SetJSON(protocol.SessionKey(userID, connID), sess, 24*time.Hour); err != nil {
 		return err
 	}
-
 	return nil
 }

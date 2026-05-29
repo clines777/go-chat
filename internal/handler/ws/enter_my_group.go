@@ -19,7 +19,7 @@ func EnterMyGroup(ctx *ws.Ctx) *protocol.Payload {
 		}
 	}
 
-	sess := session.Get(ctx.Client.ConnID)
+	sess := session.Get(ctx.Client.UserId, ctx.Client.ConnID)
 
 	groups, err := group.GetMyGroupsPaged(sess.UserID, req.Page)
 	if err != nil {
@@ -31,7 +31,7 @@ func EnterMyGroup(ctx *ws.Ctx) *protocol.Payload {
 
 	sess.Scene = protocol.SceneMyGroup
 	sess.InGroupID = 0
-	if err := session.Set(ctx.Client.ConnID, sess); err != nil {
+	if err := session.Set(ctx.Client.UserId, ctx.Client.ConnID, sess); err != nil {
 		log.Printf("[EnterMyGroup] session.Set error: %v", err)
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
 	}
