@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 	"errors"
+	"gochat/internal/ws"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
 	"gochat/internal/chat"
 	"gochat/internal/handler/api"
 	_ "gochat/internal/handler/ws"
@@ -14,8 +14,6 @@ import (
 	infranats "gochat/internal/infra/nats"
 	"gochat/internal/infra/redis"
 	"gochat/internal/middleware"
-	"gochat/internal/protocol"
-	"gochat/internal/ws"
 	"log"
 	"net/http"
 	"os"
@@ -23,12 +21,6 @@ import (
 	"syscall"
 	"time"
 )
-
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin:     func(r *http.Request) bool { return true },
-}
 
 func main() {
 
@@ -45,6 +37,7 @@ func main() {
 	if err := redisConn.Ping(); err != nil {
 		log.Fatalf("redis health check failed: %v", err)
 	}
+	log.Println("[REDIS] check success")
 
 	natsClient, natsErr := infranats.GetNats()
 	if natsErr != nil {
@@ -59,6 +52,7 @@ func main() {
 	log.Println("[NATS] check success")
 
 	serverName := infra.GetEnvConfig().ServerName
+	//subscribe群組聊天管道
 	if err := chat.StartGroupChatConsumer(serverName); err != nil {
 		log.Fatalf("nats consumer start failed: %v", err)
 	}
@@ -79,7 +73,7 @@ func main() {
 	}()
 
 	wsMux := http.NewServeMux()
-	wsMux.HandleFunc("/ws", wsHandler)
+	wsMux.HandleFunc("/ws", ws.HandleWs)
 	wsSrv := &http.Server{
 		Addr:    ":9502",
 		Handler: wsMux,
@@ -101,57 +95,4 @@ func main() {
 	_ = httpSrv.Shutdown(ctx)
 	_ = wsSrv.Shutdown(ctx)
 	log.Println("server closed")
-}
-
-func wsHandler(w http.ResponseWriter, r *http.Request) {
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Printf("[WS] upgrade error: %v", err)
-		return
-	}
-
-	client := ws.NewClient(conn)
-	go client.WritePump()
-
-	conn.SetPongHandler(func(string) error {
-		_ = conn.SetReadDeadline(time.Now().Add(ws.PongWait))
-		return nil
-	})
-
-	for {
-		mt, input, err := conn.ReadMessage()
-		if err != nil {
-			log.Printf("[WS] read error: %v", err)
-			close(client.Send)
-			return
-		}
-		if mt != websocket.TextMessage {
-			ws.Unregister(client.ConnID)
-			close(client.Send)
-			client.Conn.Close()
-			return
-		}
-
-		output, dispatchErr := ws.Default.Dispatch(client, input)
-		if dispatchErr != nil {
-			var de *protocol.DispatchError
-			if errors.As(dispatchErr, &de) && de.Fatal {
-				ws.Unregister(client.ConnID)
-				client.Conn.Close()
-				close(client.Send)
-				return
-			}
-			continue
-		}
-
-		if len(output) > 0 {
-			select {
-			case client.Send <- output:
-			default:
-				ws.Unregister(client.ConnID)
-				close(client.Send)
-				return
-			}
-		}
-	}
 }

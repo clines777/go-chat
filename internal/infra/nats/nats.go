@@ -12,7 +12,7 @@ import (
 
 var invalidConsumerChar = regexp.MustCompile(`[^a-zA-Z0-9\-_]`)
 
-const StreamName = "CHAT"
+const ChatStream = "CHAT"
 
 var conn *Client
 
@@ -47,10 +47,10 @@ func (c *Client) Ping() error {
 }
 
 func (c *Client) EnsureStream() error {
-	_, err := c.JS.StreamInfo(StreamName)
+	_, err := c.JS.StreamInfo(ChatStream)
 	if errors.Is(err, gonats.ErrStreamNotFound) {
 		_, err = c.JS.AddStream(&gonats.StreamConfig{
-			Name:     StreamName,
+			Name:     ChatStream,
 			Subjects: []string{"chat.group.*"},
 			Storage:  gonats.MemoryStorage,
 			MaxAge:   5 * time.Minute,
