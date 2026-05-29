@@ -51,3 +51,10 @@ type UpdateLastReadReq struct {
 	GroupID int `json:"group_id"`
 	ChatID  int `json:"chat_id"`
 }
+
+type UpdateGroupReq struct {
+	GroupID  int    `json:"group_id" validate:"required"`
+	Title    string `json:"title" validate:"required"`
+	Bulletin string `json:"bulletin,omitempty"`
+	Remark   string `json:"remark,omitempty"`
+}

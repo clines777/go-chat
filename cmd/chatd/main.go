@@ -6,10 +6,9 @@ import (
 	"gochat/internal/ws"
 
 	"github.com/gin-gonic/gin"
-	"gochat/internal/chat"
 	"gochat/internal/handler/api"
+	consumer "gochat/internal/handler/consumer"
 	_ "gochat/internal/handler/ws"
-	"gochat/internal/infra"
 	"gochat/internal/infra/db"
 	infranats "gochat/internal/infra/nats"
 	"gochat/internal/infra/redis"
@@ -46,16 +45,11 @@ func main() {
 	if err := natsClient.Ping(); err != nil {
 		log.Fatalf("nats health check failed: %v", err)
 	}
-	if err := natsClient.EnsureStream(); err != nil {
+	consumer.Register()
+	if err := natsClient.Init(); err != nil {
 		log.Fatalf("nats stream setup failed: %v", err)
 	}
 	log.Println("[NATS] check success")
-
-	serverName := infra.GetEnvConfig().ServerName
-	//subscribe群組聊天管道
-	if err := chat.StartGroupChatConsumer(serverName); err != nil {
-		log.Fatalf("nats consumer start failed: %v", err)
-	}
 
 	r := gin.New()
 	r.Use(middleware.Logger(), gin.Recovery())

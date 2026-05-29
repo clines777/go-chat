@@ -49,4 +49,5 @@ const (
 	LogoutOK         MsgType = "logout_ok"
 	UpdateGroup      MsgType = "update_group"
 	UpdateGroupOk    MsgType = "update_group_ok"
+	UpdateGroupCast  MsgType = "update_group_cast"
 )

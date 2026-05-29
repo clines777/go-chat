@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
+	infranats "gochat/internal/infra/nats"
 	"log"
 
 	"gochat/internal/chat"
@@ -57,8 +59,10 @@ func SendChat(ctx *ws.Ctx) *protocol.Payload {
 		Content:    req.Content,
 		CreateTime: record.CreateTime,
 	}
-	if err := chat.Publish(event); err != nil {
-		log.Printf("[SendChat] Publish group=%d error: %v", req.GroupId, err)
+
+	subject := fmt.Sprintf("chat.group.%d", event.GroupId)
+	if err = infranats.Publish(subject, event); err != nil {
+		log.Printf("[SendChat] Publish event=%+v error: %v", event, err)
 	}
 
 	respData, err := json.Marshal(&protocol.SendChatResp{
