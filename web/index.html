@@ -670,6 +670,22 @@
     .ip-cover:hover .cover-change-btn { opacity: 1; }
     .cover-uploading .cover-change-btn { opacity: 1; cursor: default; }
 
+    /* ── Info panel edit btn ── */
+    .ip-title-row {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 4px;
+    }
+    .ip-edit-btn {
+      background: none; border: none;
+      color: var(--muted); cursor: pointer;
+      font-size: 13px; padding: 2px 5px;
+      border-radius: 5px;
+      transition: color .15s, background .15s;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+    .ip-edit-btn:hover { color: var(--accent); background: rgba(203,166,247,.12); }
+
     /* ── Leave group button ── */
     .ip-leave-btn {
       margin-top: auto;
@@ -867,7 +883,10 @@
       </div>
       <input ref="coverFileInputRef" type="file" accept="image/jpeg,image/png" style="display:none" @change="handleCoverUpload" />
 
-      <div class="ip-title"># {{ groupInfo.title || currentGroup.title }}</div>
+      <div class="ip-title-row">
+        <div class="ip-title"># {{ groupInfo.title || currentGroup.title }}</div>
+        <button v-if="isGroupOwner" class="ip-edit-btn" @click="openUpdateGroup" title="編輯群組">✏️</button>
+      </div>
       <div class="ip-count">{{ groupInfo.userTotal ?? currentGroup.memberCount }} 位成員</div>
       <div class="ip-divider"></div>
 
@@ -966,6 +985,30 @@
     </div>
   </div>
 
+  <!-- ── Update Group Modal ── -->
+  <div v-if="showUpdateGroup" class="modal-overlay" @click.self="showUpdateGroup = false">
+    <div class="modal">
+      <h3>編輯群組</h3>
+      <div class="modal-sub">修改群組名稱、公告或備註</div>
+
+      <div class="cg-field">
+        <label>群組名稱 *</label>
+        <input type="text" v-model="updateGroupForm.title" placeholder="輸入群組名稱" maxlength="30" />
+      </div>
+      <div class="cg-field">
+        <label>公告</label>
+        <textarea v-model="updateGroupForm.bulletin" placeholder="群組公告內容…"></textarea>
+      </div>
+      <div class="cg-field">
+        <label>備註</label>
+        <input type="text" v-model="updateGroupForm.remark" placeholder="群組備註" maxlength="100" />
+      </div>
+
+      <button class="modal-submit" @click="submitUpdateGroup" :disabled="!updateGroupForm.title.trim()">儲存變更</button>
+      <button class="modal-close" @click="showUpdateGroup = false">取消</button>
+    </div>
+  </div>
+
   <!-- ── Toast ── -->
   <div v-if="toast" class="toast">{{ toast }}</div>
 
@@ -1009,6 +1052,9 @@ createApp({
 
     const showCreateGroup  = ref(false);
     const createGroupForm  = reactive({ title: '', code: '', userLimit: 0, bulletin: '', openJoin: false });
+
+    const showUpdateGroup  = ref(false);
+    const updateGroupForm  = reactive({ title: '', bulletin: '', remark: '' });
 
     const groupInfo = reactive({ title: '', userTotal: null, bulletin: '', ownerUsername: '', ownerUserId: 0, code: '', remark: '', coverUrl: '' });
     const coverUploading  = ref(false);
@@ -1186,6 +1232,27 @@ createApp({
           break;
 
         case 'send_chat_ok':
+          break;
+
+        case 'update_group_ok': {
+          groupInfo.title    = updateGroupForm.title;
+          currentGroup.title = updateGroupForm.title;
+          if (updateGroupForm.bulletin) groupInfo.bulletin = updateGroupForm.bulletin;
+          if (updateGroupForm.remark)   groupInfo.remark   = updateGroupForm.remark;
+          const mg = myGroups.value.find(g => g.id === currentGroupId.value);
+          if (mg) mg.title = updateGroupForm.title;
+          showUpdateGroup.value = false;
+          showToast('群組資料已更新 ✓');
+          break;
+        }
+
+        case 'update_group_cast':
+          if (data && data.group_id === currentGroup.id) {
+            currentGroup.title = data.title;
+            groupInfo.title    = data.title;
+            const mg = myGroups.value.find(g => g.id === data.group_id);
+            if (mg) mg.title = data.title;
+          }
           break;
 
         case 'error':
@@ -1424,6 +1491,25 @@ createApp({
       }
     }
 
+    // ── Update group ──
+
+    function openUpdateGroup() {
+      updateGroupForm.title    = groupInfo.title || currentGroup.title;
+      updateGroupForm.bulletin = groupInfo.bulletin;
+      updateGroupForm.remark   = groupInfo.remark;
+      showUpdateGroup.value    = true;
+    }
+
+    function submitUpdateGroup() {
+      if (!updateGroupForm.title.trim()) return;
+      wsSend('update_group', {
+        group_id: currentGroupId.value,
+        title:    updateGroupForm.title.trim(),
+        bulletin: updateGroupForm.bulletin.trim(),
+        remark:   updateGroupForm.remark.trim(),
+      });
+    }
+
     // ── Group cover upload ──
 
     function triggerCoverUpload() {
@@ -1509,6 +1595,7 @@ createApp({
       doLogin, switchTab, enterGroup, sendChat, formatTime,
       openProfile, setAvatar, joinGroup, leaveGroup, logout,
       openCreateGroup, submitCreateGroup,
+      showUpdateGroup, updateGroupForm, openUpdateGroup, submitUpdateGroup,
       copyCode,
       triggerCoverUpload, handleCoverUpload,
     };

@@ -5,13 +5,13 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"errors"
+	"strings"
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"gochat/internal/infra/db"
 	"gochat/internal/model"
 	"gochat/internal/protocol"
-	"strings"
 )
 
 var (
@@ -343,6 +343,35 @@ func Leave(userID, groupID int) error {
 		Where(sq.Eq{"id": gu.ID}).
 		RunWith(d.DB).Exec()
 	return err
+}
+
+func Update(groupID int, title, bulletin, remark string) (int, error) {
+	if title == "" && bulletin == "" && remark == "" {
+		return 0, nil
+	}
+	d, err := db.GetDBConn()
+	if err != nil {
+		return 0, err
+	}
+	q := d.Builder.Update("chat_group").
+		Set("update_time", time.Now().Unix()).
+		Where(sq.Eq{"id": groupID})
+	if title != "" {
+		q = q.Set("title", title)
+	}
+	if bulletin != "" {
+		q = q.Set("bulletin", bulletin)
+	}
+	if remark != "" {
+		q = q.Set("remark", remark)
+	}
+	r, err := q.RunWith(d.DB).Exec()
+	if err != nil {
+		return 0, err
+	}
+
+	n, err := r.RowsAffected()
+	return int(n), err
 }
 
 func UpdateLastRead(userID, groupID, chatID int) error {

@@ -1,7 +1,7 @@
 package consumer
 
 import (
-	"gochat/internal/infra"
+	gonats "github.com/nats-io/nats.go"
 	infranats "gochat/internal/infra/nats"
 )
 
@@ -11,6 +11,17 @@ func Register() {
 		if err != nil {
 			return err
 		}
-		return nc.SubscribeChatStream(infra.GetEnvConfig().ServerName, GroupChat)
+		chatOpts := []gonats.SubOpt{
+			gonats.AckNone(),
+			gonats.DeliverNew(),
+		}
+		if err := nc.SubscribeSubject(infranats.SubjectGroupChat, GroupChat, chatOpts...); err != nil {
+			return err
+		}
+		groupUpdOpts := []gonats.SubOpt{
+			gonats.AckNone(),
+			gonats.DeliverNew(),
+		}
+		return nc.SubscribeSubject(infranats.SubjectGroupUpdate, GroupUpdate, groupUpdOpts...)
 	})
 }

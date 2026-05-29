@@ -1,0 +1,28 @@
+package consumer
+
+import (
+	"encoding/json"
+	"log"
+	"strconv"
+	"strings"
+
+	"gochat/internal/protocol"
+	"gochat/internal/ws"
+)
+
+func GroupUpdate(subject string, data []byte) {
+	parts := strings.Split(subject, ".")
+	if len(parts) != 3 {
+		return
+	}
+	gid, err := strconv.Atoi(parts[2])
+	if err != nil {
+		return
+	}
+	castMsg, err := json.Marshal(&protocol.Payload{MsgType: protocol.UpdateGroupCast, Data: data})
+	if err != nil {
+		log.Printf("group update consumer marshal error: %v", err)
+		return
+	}
+	ws.BroadcastToGroup(gid, castMsg)
+}

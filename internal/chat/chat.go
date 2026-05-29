@@ -1,13 +1,10 @@
 package chat
 
 import (
-	"encoding/json"
-	"fmt"
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"gochat/internal/infra/db"
-	infranats "gochat/internal/infra/nats"
 	"gochat/internal/model"
 	"gochat/internal/protocol"
 )
@@ -77,14 +74,3 @@ func GetRecentChats(groupID int, limit int) ([]protocol.ChatInfo, error) {
 	return rows, nil
 }
 
-func Publish(event *protocol.CastChatEvent) error {
-	nc, err := infranats.GetNats()
-	if err != nil {
-		return err
-	}
-	data, err := json.Marshal(event)
-	if err != nil {
-		return err
-	}
-	return nc.Publish(fmt.Sprintf("chat.group.%d", event.GroupId), data)
-}

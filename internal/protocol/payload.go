@@ -128,6 +128,13 @@ type GroupInfoResp struct {
 	CoverURL      string `json:"cover_url"`
 }
 
+type UpdateGroupCastEvent struct {
+	GroupID  int    `json:"group_id"`
+	Title    string `json:"title"`
+	Bulletin string `json:"bulletin"`
+	Remark   string `json:"remark"`
+}
+
 func NewErrPayload(errCode int, remark string, origin *Payload) *Payload {
 	return &Payload{MsgType: Error, ErrCode: errCode, Remark: remark, Origin: origin}
 }

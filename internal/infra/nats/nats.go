@@ -1,6 +1,7 @@
 package nats
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
@@ -14,6 +15,7 @@ var invalidConsumerChar = regexp.MustCompile(`[^a-zA-Z0-9\-_]`)
 
 const StreamChat = "CHAT"
 const SubjectGroupChat = "group.chat.*"
+const SubjectGroupUpdate = "group.update.*"
 
 var conn *Client
 var consumers []func() error
@@ -53,15 +55,21 @@ func (c *Client) Ping() error {
 }
 
 func (c *Client) EnsureStreams() error {
+	cfg := &gonats.StreamConfig{
+		Name:     StreamChat,
+		Subjects: []string{SubjectGroupChat, SubjectGroupUpdate},
+		Storage:  gonats.MemoryStorage,
+		MaxAge:   5 * time.Minute,
+	}
 	_, err := c.JS.StreamInfo(StreamChat)
 	if errors.Is(err, gonats.ErrStreamNotFound) {
-		_, err = c.JS.AddStream(&gonats.StreamConfig{
-			Name:     StreamChat,
-			Subjects: []string{SubjectGroupChat},
-			Storage:  gonats.MemoryStorage,
-			MaxAge:   5 * time.Minute,
-		})
+		_, err = c.JS.AddStream(cfg)
+		return err
 	}
+	if err != nil {
+		return err
+	}
+	_, err = c.JS.UpdateStream(cfg)
 	return err
 }
 
@@ -77,20 +85,34 @@ func (c *Client) Init() error {
 	return nil
 }
 
-func (c *Client) Publish(subject string, data []byte) error {
+func (c *Client) publish(subject string, data []byte) error {
 	_, err := c.JS.Publish(subject, data)
 	return err
 }
 
-// SubscribeChatStream 訂閱group chat.
-// The handler receives (subjectName, bytes) for each message.
-func (c *Client) SubscribeChatStream(serverName string, handler func(subject string, data []byte)) error {
+func Publish(subject string, v any) error {
+	nc, err := GetNats()
+	if err != nil {
+		return err
+	}
+	data, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	return nc.publish(subject, data)
+}
+
+// SubscribeSubject 訂閱指定subject，subscription選項由caller傳入。
+func (c *Client) SubscribeSubject(subject string, handler func(subject string, data []byte), opts ...gonats.SubOpt) error {
 	_, err := c.JS.Subscribe(
-		SubjectGroupChat,
+		subject,
 		func(msg *gonats.Msg) { handler(msg.Subject, msg.Data) },
-		gonats.Durable("chat-"+invalidConsumerChar.ReplaceAllString(serverName, "_")),
-		gonats.AckNone(),
-		gonats.DeliverNew(),
+		opts...,
 	)
 	return err
+}
+
+// SanitizeName 將consumer name中不合法的字元替換為底線。
+func SanitizeName(s string) string {
+	return invalidConsumerChar.ReplaceAllString(s, "_")
 }
