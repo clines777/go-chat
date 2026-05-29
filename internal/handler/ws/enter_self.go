@@ -13,7 +13,7 @@ import (
 )
 
 func EnterSelf(ctx *ws.Ctx) *protocol.Payload {
-	sess := session.Get(ctx.Client.ConnID)
+	sess := session.Get(ctx.Client.UserId, ctx.Client.ConnID)
 
 	u, err := user.FindByID(sess.UserID)
 	if err != nil {

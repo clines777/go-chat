@@ -28,16 +28,7 @@ func Resume(ctx *ws.Ctx) *protocol.Payload {
 		return protocol.NewErrPayload(protocol.ErrUnauthorized, "invalid or expired token", ctx.Payload)
 	}
 
-	sess := &session.Session{
-		ConnID:    ctx.Client.ConnID,
-		UserID:    tokenPayload.UserID,
-		Username:  tokenPayload.Username,
-		Scene: protocol.SceneMyGroup,
-	}
-	if err := session.Set(ctx.Client.ConnID, sess); err != nil {
-		log.Printf("[Resume] session.Set error: %v", err)
-		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
-	}
+	ctx.Client.UserId = tokenPayload.UserID
 	ws.Register(ctx.Client)
 
 	userGroups, err := group.GetMyGroups(tokenPayload.UserID)
@@ -51,8 +42,21 @@ func Resume(ctx *ws.Ctx) *protocol.Payload {
 		log.Printf("[Resume] GenerateApiToken error: %v", err)
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
 	}
+	ctx.Client.ApiToken = apiToken
 
 	user.RefreshResumeToken(req.Token)
+
+	sess := &session.Session{
+		ConnID:   ctx.Client.ConnID,
+		UserID:   tokenPayload.UserID,
+		Username: tokenPayload.Username,
+		Scene:    protocol.SceneMyGroup,
+		ApiToken: apiToken,
+	}
+	if err := session.Set(tokenPayload.UserID, ctx.Client.ConnID, sess); err != nil {
+		log.Printf("[Resume] session.Set error: %v", err)
+		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
+	}
 
 	respData, err := json.Marshal(&protocol.LoginResp{
 		UserID:      tokenPayload.UserID,

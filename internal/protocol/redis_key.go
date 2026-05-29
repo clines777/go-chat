@@ -1,5 +1,7 @@
 package protocol
 
+import "fmt"
+
 const (
 	tokenPrefix = "token"
 	loginToken  = "t_login"
@@ -20,6 +22,6 @@ func ResumeTokenKey(token string) string {
 	return tokenPrefix + ":" + resumeToken + ":" + token
 }
 
-func SessionKey(connId string) string {
-	return session + ":" + connId
+func SessionKey(userID int, connID string) string {
+	return fmt.Sprintf("%s:%d:%s", session, userID, connID)
 }

@@ -21,7 +21,7 @@ func SendChat(ctx *ws.Ctx) *protocol.Payload {
 		return protocol.NewErrPayload(protocol.ErrInvalidParam, "invalid request", ctx.Payload)
 	}
 
-	sess := session.Get(ctx.Client.ConnID)
+	sess := session.Get(ctx.Client.UserId, ctx.Client.ConnID)
 	if sess.Scene != protocol.SceneInGroup || sess.InGroupID != req.GroupId {
 		return protocol.NewErrPayload(protocol.ErrInvalidParam, "not in group", ctx.Payload)
 	}

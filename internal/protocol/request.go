@@ -42,7 +42,7 @@ type ResumeReq struct {
 	Token string `json:"token"`
 }
 
-type ResumeTokenPayload struct {
+type ResumeTokenInfo struct {
 	UserID   int    `json:"user_id"`
 	Username string `json:"username"`
 }

@@ -6,6 +6,7 @@ import (
 
 	"gochat/internal/group"
 	"gochat/internal/protocol"
+	"gochat/internal/session"
 	"gochat/internal/user"
 	"gochat/internal/ws"
 )
@@ -23,13 +24,13 @@ func Login(ctx *ws.Ctx) *protocol.Payload {
 		return protocol.NewErrPayload(protocol.ErrUnauthorized, "invalid token", ctx.Payload)
 	}
 
-	u, err := user.Login(ctx, tokenInfo)
+	u, err := user.Login(tokenInfo)
 	if err != nil {
 		log.Printf("[Login] user.Login error: %v", err)
 		return protocol.NewErrPayload(protocol.ErrInternalError, "user login error", ctx.Payload)
 	}
 
-	ctx.Client.UserId = u.ID // 補上user id用於後續辨識連線用戶身份.
+	ctx.Client.UserId = u.ID
 	ws.Register(ctx.Client)
 
 	userGroups, err := group.GetMyGroups(u.ID)
@@ -43,10 +44,24 @@ func Login(ctx *ws.Ctx) *protocol.Payload {
 		log.Printf("[Login] GenerateApiToken error: %v", err)
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
 	}
+	ctx.Client.ApiToken = apiToken
 
 	resumeToken, err := user.GenerateResumeToken(u)
 	if err != nil {
 		log.Printf("[Login] GenerateResumeToken error: %v", err)
+		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
+	}
+
+	sess := &session.Session{
+		ConnID:    ctx.Client.ConnID,
+		UserID:    u.ID,
+		Username:  u.Username,
+		InGroupID: 0,
+		Scene:     protocol.SceneMyGroup,
+		ApiToken:  apiToken,
+	}
+	if err := session.Set(u.ID, ctx.Client.ConnID, sess); err != nil {
+		log.Printf("[Login] session.Set error: %v", err)
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
 	}
 

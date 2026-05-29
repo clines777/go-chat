@@ -60,7 +60,7 @@ func (d *Dispatcher) Dispatch(client *Client, in []byte) ([]byte, error) {
 	ctx := &Ctx{Client: client, Payload: p}
 
 	if !h.SessionFree {
-		if session.Get(client.ConnID) == nil {
+		if session.Get(client.UserId, client.ConnID) == nil {
 			writeError(client, "session required")
 			return nil, &protocol.DispatchError{Code: protocol.ErrSessionRequired, Message: "session required"}
 		}
