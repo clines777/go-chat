@@ -2,8 +2,26 @@ package protocol
 
 import (
 	"encoding/json"
+	"github.com/gin-gonic/gin"
 	_ "github.com/go-playground/validator/v10"
 )
+
+// ApiResponse http 返回 response
+type ApiResponse struct {
+	Code    int         `json:"code"`
+	Message string      `json:"msg"`
+	Data    interface{} `json:"data"`
+}
+
+func NewApiResponse(code int, msg string, data any) *ApiResponse {
+	return &ApiResponse{Code: code, Message: msg, Data: data}
+}
+
+func (r *ApiResponse) H() map[string]any {
+	return gin.H{"code": r.Code, "msg": r.Message, "data": r.Data}
+}
+
+//ws payload
 
 type Payload struct {
 	MsgType MsgType         `json:"msg_type"`
@@ -17,19 +35,6 @@ type Payload struct {
 type Meta struct {
 	RequestID string `json:"request_id,omitempty"`
 	Timestamp int    `json:"timestamp,omitempty"`
-}
-
-type LoginReq struct {
-	Token     string `json:"token" validate:"required"`
-	Timestamp int    `json:"timestamp,omitempty"`
-}
-
-type LoginResp struct {
-	UserID      int                `json:"user_id"`
-	Username    string             `json:"username"`
-	ApiToken    string             `json:"api_token"`
-	ResumeToken string             `json:"resume_token"`
-	UserGroups  []DisplayUserGroup `json:"user_groups"`
 }
 
 type DisplayUserGroup struct {
@@ -88,6 +93,12 @@ type CastChatEvent struct {
 	CreateTime int    `json:"create_time"`
 }
 
+type LeaveGroupEvent struct {
+	GroupId int   `json:"group_id"`
+	UserId  int   `json:"user_id"`
+	Time    int64 `json:"time"`
+}
+
 type EnterGroupReq struct {
 	GroupID int `json:"group_id" validate:"required"`
 }
@@ -137,4 +148,74 @@ type UpdateGroupCastEvent struct {
 
 func NewErrPayload(errCode int, remark string, origin *Payload) *Payload {
 	return &Payload{MsgType: Error, ErrCode: errCode, Remark: remark, Origin: origin}
+}
+
+type GetTokenReq struct {
+	Username string `json:"username"`
+}
+
+type GetUserInfoReq struct {
+	UserId int `form:"user_id"`
+}
+
+type GetGroupInfoReq struct {
+	GroupID int `form:"group_id"`
+}
+
+type ApiTokenInfo struct {
+	UserID int `json:"user_id"`
+}
+
+type JoinGroupReq struct {
+	GroupID int `json:"group_id" binding:"required"`
+}
+
+type LeaveGroupReq struct {
+	GroupID int `json:"group_id" binding:"required"`
+}
+
+type CreateGroupReq struct {
+	Title     string `json:"title" binding:"required"`
+	Code      string `json:"code"`
+	UserLimit int    `json:"user_limit"`
+	Bulletin  string `json:"bulletin"`
+	OpenJoin  bool   `json:"open_join"`
+}
+
+type SetAvatarReq struct {
+	AvatarId int `json:"avatar_id" binding:"required"`
+}
+
+type ResumeReq struct {
+	Token string `json:"token"`
+}
+
+type ResumeTokenInfo struct {
+	UserID   int    `json:"user_id"`
+	Username string `json:"username"`
+}
+
+type UpdateLastReadReq struct {
+	GroupID int `json:"group_id"`
+	ChatID  int `json:"chat_id"`
+}
+
+type UpdateGroupReq struct {
+	GroupID  int    `json:"group_id" validate:"required"`
+	Title    string `json:"title" validate:"required"`
+	Bulletin string `json:"bulletin,omitempty"`
+	Remark   string `json:"remark,omitempty"`
+}
+
+type LoginReq struct {
+	Token     string `json:"token" validate:"required"`
+	Timestamp int    `json:"timestamp,omitempty"`
+}
+
+type LoginResp struct {
+	UserID      int                `json:"user_id"`
+	Username    string             `json:"username"`
+	ApiToken    string             `json:"api_token"`
+	ResumeToken string             `json:"resume_token"`
+	UserGroups  []DisplayUserGroup `json:"user_groups"`
 }
