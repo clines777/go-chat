@@ -54,3 +54,48 @@ func CastSendChat(msg *gonats.Msg) {
 
 	ws.BroadcastToGroup(event.GroupID, wsMsg)
 }
+
+// CastPinChat - 轉發置頂發言, 純通知, AckNone
+func CastPinChat(msg *gonats.Msg) {
+	var event protocol.PinChatCastEvent
+	if err := json.Unmarshal(msg.Data, &event); err != nil {
+		log.Printf("[CastPinChat] unmarshall err: %v", err)
+		return
+	}
+	castMsg, err := json.Marshal(&protocol.Payload{MsgType: protocol.PinChatCast, Data: msg.Data})
+	if err != nil {
+		log.Printf("[CastPinChat] consumer marshal error: %v", err)
+		return
+	}
+	ws.BroadcastToGroup(event.GroupID, castMsg)
+}
+
+// CastUnpinChat - 轉發取消置頂, 純通知, AckNone
+func CastUnpinChat(msg *gonats.Msg) {
+	var event protocol.UnpinChatCastEvent
+	if err := json.Unmarshal(msg.Data, &event); err != nil {
+		log.Printf("[CastUnpinChat] unmarshall err: %v", err)
+		return
+	}
+	castMsg, err := json.Marshal(&protocol.Payload{MsgType: protocol.UnpinChatCast, Data: msg.Data})
+	if err != nil {
+		log.Printf("[CastUnpinChat] consumer marshal error: %v", err)
+		return
+	}
+	ws.BroadcastToGroup(event.GroupID, castMsg)
+}
+
+// CastDelChat - 轉發發言刪除, 純通知, AckNone
+func CastDelChat(msg *gonats.Msg) {
+	var event protocol.DelChatCastEvent
+	if err := json.Unmarshal(msg.Data, &event); err != nil {
+		log.Printf("[CastDelChat] unmarshall err: %v", err)
+		return
+	}
+	castMsg, err := json.Marshal(&protocol.Payload{MsgType: protocol.DelChatCast, Data: msg.Data})
+	if err != nil {
+		log.Printf("[CastDelChat] consumer marshal error: %v", err)
+		return
+	}
+	ws.BroadcastToGroup(event.GroupID, castMsg)
+}

@@ -39,6 +39,23 @@ func Register() {
 			return err
 		}
 
+		notifyOpts := []gonats.SubOpt{
+			gonats.AckNone(),
+			gonats.DeliverNew(),
+		}
+		if err = nc.SubscribeSubject(infranats.SubjectGroupPin, CastPinChat, notifyOpts...); err != nil {
+			fmt.Printf("Failed to subscribe subject: %v\n", err)
+			return err
+		}
+		if err = nc.SubscribeSubject(infranats.SubjectGroupUnpin, CastUnpinChat, notifyOpts...); err != nil {
+			fmt.Printf("Failed to subscribe subject: %v\n", err)
+			return err
+		}
+		if err = nc.SubscribeSubject(infranats.SubjectGroupDel, CastDelChat, notifyOpts...); err != nil {
+			fmt.Printf("Failed to subscribe subject: %v\n", err)
+			return err
+		}
+
 		return nil
 	})
 }

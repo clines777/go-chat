@@ -146,6 +146,34 @@ type UpdateGroupCastEvent struct {
 	Remark   string `json:"remark"`
 }
 
+type PinChatReq struct {
+	GroupID int `json:"group_id" validate:"required"`
+	ChatID  int `json:"chat_id" validate:"required"`
+}
+
+type UnpinChatReq struct {
+	GroupID int `json:"group_id" validate:"required"`
+}
+
+type DelChatReq struct {
+	GroupID int `json:"group_id" validate:"required"`
+	ChatID  int `json:"chat_id" validate:"required"`
+}
+
+type PinChatCastEvent struct {
+	GroupID int `json:"group_id"`
+	ChatID  int `json:"chat_id"`
+}
+
+type UnpinChatCastEvent struct {
+	GroupID int `json:"group_id"`
+}
+
+type DelChatCastEvent struct {
+	GroupID int `json:"group_id"`
+	ChatID  int `json:"chat_id"`
+}
+
 func NewErrPayload(errCode int, remark string, origin *Payload) *Payload {
 	return &Payload{MsgType: Error, ErrCode: errCode, Remark: remark, Origin: origin}
 }
