@@ -4,18 +4,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"regexp"
 	"time"
 
 	gonats "github.com/nats-io/nats.go"
 	"gochat/internal/infra"
 )
 
-var invalidConsumerChar = regexp.MustCompile(`[^a-zA-Z0-9\-_]`)
-
 const StreamChat = "CHAT"
-const SubjectGroupChat = "group.chat.*"
-const SubjectGroupUpdate = "group.update.*"
+const SubjectGroupChat = "group.chat."
+const SubjectGroupUpdate = "group.update."
 
 var conn *Client
 var consumers []func() error
@@ -57,7 +54,7 @@ func (c *Client) Ping() error {
 func (c *Client) EnsureStreams() error {
 	cfg := &gonats.StreamConfig{
 		Name:     StreamChat,
-		Subjects: []string{SubjectGroupChat, SubjectGroupUpdate},
+		Subjects: []string{SubjectGroupChat + "*", SubjectGroupUpdate + "*"},
 		Storage:  gonats.MemoryStorage,
 		MaxAge:   5 * time.Minute,
 	}
@@ -102,17 +99,8 @@ func Publish(subject string, v any) error {
 	return nc.publish(subject, data)
 }
 
-// SubscribeSubject 訂閱指定subject，subscription選項由caller傳入。
-func (c *Client) SubscribeSubject(subject string, handler func(subject string, data []byte), opts ...gonats.SubOpt) error {
-	_, err := c.JS.Subscribe(
-		subject,
-		func(msg *gonats.Msg) { handler(msg.Subject, msg.Data) },
-		opts...,
-	)
+// SubscribeSubject 訂閱指定subject，選項由caller傳入。
+func (c *Client) SubscribeSubject(subject string, handler gonats.MsgHandler, opts ...gonats.SubOpt) error {
+	_, err := c.JS.Subscribe(subject, handler, opts...)
 	return err
-}
-
-// SanitizeName 將consumer name中不合法的字元替換為底線。
-func SanitizeName(s string) string {
-	return invalidConsumerChar.ReplaceAllString(s, "_")
 }

@@ -55,7 +55,7 @@ func UpdateGroup(ctx *ws.Ctx) *protocol.Payload {
 
 	if updateCount > 0 {
 		event := &protocol.UpdateGroupCastEvent{GroupID: req.GroupID, Title: req.Title, Bulletin: req.Bulletin, Remark: req.Remark}
-		if err = infranats.Publish(fmt.Sprintf("group.update.%d", req.GroupID), event); err != nil {
+		if err = infranats.Publish(fmt.Sprintf("%s%d", infranats.SubjectGroupUpdate, req.GroupID), event); err != nil {
 			log.Printf("[UpdateGroup] Publish group=%d error: %v", req.GroupID, err)
 		}
 	}

@@ -312,7 +312,7 @@ func UpdateCoverFilename(groupID int, filename string) error {
 	return err
 }
 
-func Leave(userID, groupID int) error {
+func Leave(userID int, groupID int) error {
 	d, err := db.GetDBConn()
 	if err != nil {
 		return err
@@ -401,4 +401,8 @@ func GetMyGroups(userID int) ([]protocol.DisplayUserGroup, error) {
 	}
 
 	return rows, nil
+}
+
+func DelGroupMembership(groupID int, userID int) error {
+	return nil
 }

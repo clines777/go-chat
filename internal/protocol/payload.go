@@ -74,13 +74,13 @@ type SendChatReq struct {
 
 type SendChatResp struct {
 	Id         int `json:"id"`
-	GroupId    int `json:"group_id"`
+	GroupID    int `json:"group_id"`
 	CreateTime int `json:"create_time"`
 }
 
 type CastChatEvent struct {
 	Id         int    `json:"id"`
-	GroupId    int    `json:"group_id"`
+	GroupID    int    `json:"group_id"`
 	UserId     int    `json:"user_id"`
 	Username   string `json:"username"`
 	AvatarURL  string `json:"avatar_url"`
