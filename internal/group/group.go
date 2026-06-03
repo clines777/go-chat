@@ -374,6 +374,25 @@ func Update(groupID int, title, bulletin, remark string) (int, error) {
 	return int(n), err
 }
 
+// SetPinChat 設定群組置頂發言, chatID 傳 0 表示取消置頂。回傳受影響筆數。
+func SetPinChat(groupID, chatID int) (int, error) {
+	d, err := db.GetDBConn()
+	if err != nil {
+		return 0, err
+	}
+	r, err := d.Builder.
+		Update("chat_group").
+		Set("pin_chat_id", chatID).
+		Set("update_time", time.Now().Unix()).
+		Where(sq.Eq{"id": groupID}).
+		RunWith(d.DB).Exec()
+	if err != nil {
+		return 0, err
+	}
+	n, err := r.RowsAffected()
+	return int(n), err
+}
+
 func UpdateLastRead(userID, groupID, chatID int) error {
 	d, err := db.GetDBConn()
 	if err != nil {

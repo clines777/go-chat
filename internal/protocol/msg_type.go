@@ -9,6 +9,7 @@ const (
 	EnterGroupOk     MsgType = "enter_group_ok"
 	LeaveGroup       MsgType = "leave_group"
 	LeaveGroupOk     MsgType = "leave_group_ok"
+	LeaveGroupCast   MsgType = "leave_group_cast"
 	SendChat         MsgType = "send_chat"
 	SendChatOk       MsgType = "send_chat_ok"
 	CastChat         MsgType = "cast_chat"

@@ -3,7 +3,9 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	infranats "gochat/internal/infra/nats"
 	"log"
+	"time"
 
 	"gochat/internal/group"
 	"gochat/internal/protocol"
@@ -43,6 +45,12 @@ func LeaveGroup(ctx *ws.Ctx) *protocol.Payload {
 	respData, err := json.Marshal(map[string]int{"group_id": req.GroupID})
 	if err != nil {
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
+	}
+
+	event := &protocol.LeaveGroupEvent{GroupId: req.GroupID, UserId: sess.UserID, Time: time.Now().Unix()}
+	err = infranats.Publish(infranats.SubjectGroupLeave, event)
+	if err != nil {
+		log.Printf("[LeaveGroup] Publish error: %v", err)
 	}
 
 	log.Printf("[LeaveGroup] OK user=%d left group=%d", sess.UserID, req.GroupID)
