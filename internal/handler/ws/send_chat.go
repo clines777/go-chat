@@ -6,7 +6,6 @@ import (
 	"errors"
 	infranats "gochat/internal/infra/nats"
 	"log"
-	"strconv"
 
 	"gochat/internal/chat"
 	"gochat/internal/group"
@@ -60,8 +59,7 @@ func SendChat(ctx *ws.Ctx) *protocol.Payload {
 		CreateTime: record.CreateTime,
 	}
 
-	subject := infranats.SubjectGroupChat + strconv.Itoa(event.GroupID)
-	if err = infranats.Publish(subject, event); err != nil {
+	if err = infranats.Publish(infranats.SubjectGroupChat, event); err != nil {
 		log.Printf("[SendChat] Publish event=%+v error: %v", event, err)
 	}
 

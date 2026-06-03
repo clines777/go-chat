@@ -5,7 +5,6 @@ import (
 	"errors"
 	infranats "gochat/internal/infra/nats"
 	"log"
-	"strconv"
 	"time"
 
 	"gochat/internal/group"
@@ -49,7 +48,7 @@ func LeaveGroup(ctx *ws.Ctx) *protocol.Payload {
 	}
 
 	event := &protocol.LeaveGroupEvent{GroupId: req.GroupID, UserId: sess.UserID, Time: time.Now().Unix()}
-	err = infranats.Publish(infranats.SubjectGroupLeave+strconv.Itoa(req.GroupID), event)
+	err = infranats.Publish(infranats.SubjectGroupLeave, event)
 	if err != nil {
 		log.Printf("[LeaveGroup] Publish error: %v", err)
 	}

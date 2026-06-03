@@ -16,7 +16,7 @@ func Register() {
 			gonats.AckNone(),
 			gonats.DeliverNew(),
 		}
-		if err := nc.SubscribeSubject(infranats.SubjectGroupChat+"*", CastSendChat, chatOpts...); err != nil {
+		if err := nc.SubscribeSubject(infranats.SubjectGroupChat, CastSendChat, chatOpts...); err != nil {
 			fmt.Printf("Failed to subscribe subject: %v\n", err)
 			return err
 		}
@@ -25,7 +25,7 @@ func Register() {
 			gonats.DeliverNew(),
 		}
 
-		if err = nc.SubscribeSubject(infranats.SubjectGroupUpdate+"*", CastUpdateGroup, groupUpdOpts...); err != nil {
+		if err = nc.SubscribeSubject(infranats.SubjectGroupUpdate, CastUpdateGroup, groupUpdOpts...); err != nil {
 			fmt.Printf("Failed to subscribe subject: %v\n", err)
 			return err
 		}
@@ -34,7 +34,7 @@ func Register() {
 			gonats.AckNone(),
 			gonats.DeliverNew(),
 		}
-		if err = nc.SubscribeSubject(infranats.SubjectGroupLeave+"*", CastLeaveGroup, leaveGroupOpt...); err != nil {
+		if err = nc.SubscribeSubject(infranats.SubjectGroupLeave, CastLeaveGroup, leaveGroupOpt...); err != nil {
 			fmt.Printf("Failed to subscribe subject: %v\n", err)
 			return err
 		}
