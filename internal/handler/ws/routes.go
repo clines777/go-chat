@@ -18,4 +18,5 @@ func init() {
 	ws.Default.Register(protocol.Logout, &ws.Route{Handler: Logout})
 	ws.Default.Register(protocol.UpdateLastRead, &ws.Route{Handler: UpdateLastRead})
 	ws.Default.Register(protocol.UpdateGroup, &ws.Route{Handler: UpdateGroup})
+	ws.Default.Register(protocol.UpdateGroup, &ws.Route{Handler: UpdateGroup})
 }

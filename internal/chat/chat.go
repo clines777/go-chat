@@ -1,15 +1,14 @@
 package chat
 
 import (
-	"time"
-
 	sq "github.com/Masterminds/squirrel"
 	"gochat/internal/infra/db"
 	"gochat/internal/model"
 	"gochat/internal/protocol"
+	"time"
 )
 
-const TypeText = int16(1)
+const TypeText = 1
 
 func SaveRecord(groupID int, userID int, content string) (*model.ChatRecord, error) {
 	d, err := db.GetDBConn()
@@ -73,4 +72,3 @@ func GetRecentChats(groupID int, limit int) ([]protocol.ChatInfo, error) {
 	}
 	return rows, nil
 }
-
