@@ -6,6 +6,19 @@ CREATE TABLE avatar (
     filename VARCHAR(255) NOT NULL DEFAULT ''
 );
 
+-- 預設頭像資料。
+INSERT INTO avatar (id, filename) VALUES
+    (1, '1.png'),
+    (2, '2.png'),
+    (3, '3.png'),
+    (4, '4.png'),
+    (5, '5.png'),
+    (6, '6.png'),
+    (7, '7.png'),
+    (8, '8.png'),
+    (9, '9.png');
+SELECT setval('avatar_id_seq', (SELECT MAX(id) FROM avatar));
+
 -- 資料表名為保留字, 需加雙引號。
 CREATE TABLE "user" (
     id              BIGSERIAL    PRIMARY KEY,
