@@ -9,6 +9,7 @@ import (
 	"gochat/internal/protocol"
 )
 
+// Auth - 驗證Bearer token並取得 user id後寫入Context供後續使用.
 func Auth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		header := c.GetHeader("Authorization")

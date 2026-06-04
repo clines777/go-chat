@@ -12,6 +12,7 @@ import (
 
 const TypeText = 1
 
+// SaveRecord 寫入群組用戶的發送的聊天訊息.
 func SaveRecord(groupID int, userID int, content string) (*model.ChatRecord, error) {
 	d, err := db.GetDBConn()
 	if err != nil {
@@ -43,7 +44,7 @@ func SaveRecord(groupID int, userID int, content string) (*model.ChatRecord, err
 	}, nil
 }
 
-// ExistsInGroup 檢查一筆未刪除的發言是否存在於指定群組。
+// ExistsInGroup 檢查一筆未刪除的聊天訊息是否存在於指定群組。
 func ExistsInGroup(chatID, groupID int) (bool, error) {
 	d, err := db.GetDBConn()
 	if err != nil {
@@ -110,6 +111,7 @@ func FindInGroup(chatID, groupID int) (*protocol.ChatInfo, error) {
 	return &row, nil
 }
 
+// GetRecentChats 取得指定群組最新 limit 筆聊天訊息
 func GetRecentChats(groupID int, limit int) ([]protocol.ChatInfo, error) {
 	d, err := db.GetDBConn()
 	if err != nil {

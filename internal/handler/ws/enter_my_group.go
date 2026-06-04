@@ -10,6 +10,7 @@ import (
 	"gochat/internal/ws"
 )
 
+// EnterMyGroup 用戶進入我的聊天列表場景
 func EnterMyGroup(ctx *ws.Ctx) *protocol.Payload {
 	var req protocol.EnterMyGroupReq
 	if ctx.Payload.Data != nil {

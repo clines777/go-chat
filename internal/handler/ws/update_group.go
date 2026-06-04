@@ -13,6 +13,7 @@ import (
 	"gochat/internal/ws"
 )
 
+// UpdateGroup - 更新群組資訊
 func UpdateGroup(ctx *ws.Ctx) *protocol.Payload {
 	var req protocol.UpdateGroupReq
 	if err := json.Unmarshal(ctx.Payload.Data, &req); err != nil || req.GroupID == 0 {

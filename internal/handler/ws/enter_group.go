@@ -13,8 +13,10 @@ import (
 	"gochat/internal/ws"
 )
 
+// RecentChatCount 進群時拉取最新消息筆數
 const RecentChatCount = 30
 
+// EnterGroup 用戶進入群組聊天場景
 func EnterGroup(ctx *ws.Ctx) *protocol.Payload {
 	var req protocol.EnterGroupReq
 	if err := json.Unmarshal(ctx.Payload.Data, &req); err != nil || req.GroupID == 0 {

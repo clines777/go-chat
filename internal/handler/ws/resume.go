@@ -12,6 +12,7 @@ import (
 	"gochat/internal/ws"
 )
 
+// Resume 恢復連線
 func Resume(ctx *ws.Ctx) *protocol.Payload {
 	var req protocol.ResumeReq
 	if err := json.Unmarshal(ctx.Payload.Data, &req); err != nil || req.Token == "" {
@@ -64,7 +65,6 @@ func Resume(ctx *ws.Ctx) *protocol.Payload {
 		UserID:   tokenPayload.UserID,
 		Username: tokenPayload.Username,
 		Scene:    protocol.SceneMyGroup,
-		ApiToken: apiToken,
 	}
 	if err := session.Set(tokenPayload.UserID, ctx.Client.ConnID, sess); err != nil {
 		log.Printf("[Resume] session.Set error: %v", err)

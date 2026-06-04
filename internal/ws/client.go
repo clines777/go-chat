@@ -27,6 +27,7 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
+// Client - 連線物件
 type Client struct {
 	ConnID   string
 	Conn     *websocket.Conn
@@ -35,6 +36,7 @@ type Client struct {
 	ApiToken string
 }
 
+// HandleWs - 處理ws message
 func HandleWs(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -88,6 +90,7 @@ func HandleWs(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// NewClient 新建一個ws連線物件
 func NewClient(conn *websocket.Conn) *Client {
 	b := make([]byte, 8)
 	_, _ = rand.Read(b)
@@ -134,6 +137,7 @@ func (c *Client) WritePump() {
 	}
 }
 
+// TrySend - 推送ws消息
 func (c *Client) TrySend(msg []byte) {
 	select {
 	case c.Send <- msg:
@@ -141,17 +145,20 @@ func (c *Client) TrySend(msg []byte) {
 	}
 }
 
+// ws連線hub
 var hub = struct {
 	clients map[string]*Client
 	mu      sync.RWMutex
 }{clients: make(map[string]*Client)}
 
+// Register - 註冊ws連線
 func Register(c *Client) {
 	hub.mu.Lock()
 	defer hub.mu.Unlock()
 	hub.clients[c.ConnID] = c
 }
 
+// Unregister - 註銷ws連線並清除session狀態
 func Unregister(connID string) {
 	hub.mu.Lock()
 	c := hub.clients[connID]
@@ -168,7 +175,7 @@ func Unregister(connID string) {
 	}
 }
 
-// groupSubs tracks which clients are currently viewing each group on one server.
+// groupSubs 將ws連線物件byConn跟byGroup儲存, 便於廣播推送
 var groupSubs = struct {
 	byGroup map[int]map[string]*Client
 	byConn  map[string]int
@@ -178,6 +185,7 @@ var groupSubs = struct {
 	byConn:  make(map[string]int),
 }
 
+// JoinGroup - 用戶進入群內場景時將其連線置入groupSubs
 func JoinGroup(connID string, groupID int, c *Client) {
 	groupSubs.mu.Lock()
 	defer groupSubs.mu.Unlock()
@@ -192,6 +200,7 @@ func JoinGroup(connID string, groupID int, c *Client) {
 	groupSubs.byConn[connID] = groupID
 }
 
+// ResetGroupScene 重置用戶連線所在場景
 func ResetGroupScene(connID string) {
 	groupSubs.mu.Lock()
 	defer groupSubs.mu.Unlock()
@@ -202,6 +211,7 @@ func ResetGroupScene(connID string) {
 	}
 }
 
+// BroadcastToGroup 群內廣播
 func BroadcastToGroup(groupID int, data []byte) {
 	groupSubs.mu.RLock()
 	defer groupSubs.mu.RUnlock()
@@ -223,7 +233,7 @@ func SendToGroupUser(groupID, userID int, data []byte) {
 	}
 }
 
-// EvictGroupUser 將某 user 的連線移出該群場景, 回傳被移出的 connID, 之後群播不再送達。
+// EvictGroupUser 將某 user 的連線移出該群場景, 回傳被移出的 connID, 之後群內廣播不再送達。
 func EvictGroupUser(groupID, userID int) []string {
 	groupSubs.mu.Lock()
 	defer groupSubs.mu.Unlock()

@@ -11,6 +11,7 @@ import (
 	"gochat/internal/ws"
 )
 
+// Login 登入(成功才將連線寫入hub)
 func Login(ctx *ws.Ctx) *protocol.Payload {
 	var req protocol.LoginReq
 	if err := json.Unmarshal(ctx.Payload.Data, &req); err != nil || req.Token == "" {
@@ -30,9 +31,6 @@ func Login(ctx *ws.Ctx) *protocol.Payload {
 		return protocol.NewErrPayload(protocol.ErrInternalError, "user login error", ctx.Payload)
 	}
 
-	ctx.Client.UserId = u.ID
-	ws.Register(ctx.Client)
-
 	userGroups, err := group.GetMyGroups(u.ID)
 	if err != nil {
 		log.Printf("[Login] GetMyGroups error: %v", err)
@@ -44,7 +42,6 @@ func Login(ctx *ws.Ctx) *protocol.Payload {
 		log.Printf("[Login] GenerateApiToken error: %v", err)
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
 	}
-	ctx.Client.ApiToken = apiToken
 
 	resumeToken, err := user.GenerateResumeToken(u)
 	if err != nil {
@@ -58,7 +55,6 @@ func Login(ctx *ws.Ctx) *protocol.Payload {
 		Username:  u.Username,
 		InGroupID: 0,
 		Scene:     protocol.SceneMyGroup,
-		ApiToken:  apiToken,
 	}
 	if err := session.Set(u.ID, ctx.Client.ConnID, sess); err != nil {
 		log.Printf("[Login] session.Set error: %v", err)
@@ -75,6 +71,10 @@ func Login(ctx *ws.Ctx) *protocol.Payload {
 	if err != nil {
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
 	}
+
+	ctx.Client.UserId = u.ID
+	ctx.Client.ApiToken = apiToken
+	ws.Register(ctx.Client)
 
 	log.Printf("[Login] OK user=%d (%s)", u.ID, u.Username)
 	return &protocol.Payload{MsgType: protocol.LoginOK, Data: respData, Meta: ctx.Payload.Meta}

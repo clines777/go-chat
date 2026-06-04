@@ -11,6 +11,7 @@ import (
 	"gochat/internal/ws"
 )
 
+// PinChat 將群內消息置頂.
 func PinChat(ctx *ws.Ctx) *protocol.Payload {
 	var req protocol.PinChatReq
 	if err := json.Unmarshal(ctx.Payload.Data, &req); err != nil || req.GroupID == 0 || req.ChatID == 0 {

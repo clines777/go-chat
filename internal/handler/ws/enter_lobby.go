@@ -10,6 +10,7 @@ import (
 	"gochat/internal/ws"
 )
 
+// EnterLobby 用戶進入大廳場景
 func EnterLobby(ctx *ws.Ctx) *protocol.Payload {
 	var req protocol.EnterLobbyReq
 	if ctx.Payload.Data != nil {
