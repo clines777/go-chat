@@ -1,6 +1,4 @@
 -- gochat DB schema (demo 用)
--- 對應 2026-06-03 線上 DDL。所有時間欄位皆為 bigint epoch 秒; 無外鍵, 僅邏輯關聯。
---
 -- 載入: psql "$DB_URL" -f db/schema.sql
 
 CREATE TABLE avatar (
