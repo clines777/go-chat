@@ -16,7 +16,7 @@ func DelChat(ctx *ws.Ctx) *protocol.Payload {
 		return protocol.NewErrPayload(protocol.ErrInvalidParam, "invalid request", ctx.Payload)
 	}
 
-	if errPayload := requireGroupOwner(ctx, req.GroupID, "DelChat"); errPayload != nil {
+	if errPayload := checkGroupOwner(ctx, req.GroupID, "DelChat"); errPayload != nil {
 		return errPayload
 	}
 

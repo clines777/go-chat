@@ -27,6 +27,18 @@ func SendChat(ctx *ws.Ctx) *protocol.Payload {
 		return protocol.NewErrPayload(protocol.ErrInvalidParam, "not in group", ctx.Payload)
 	}
 
+	gu, err := group.GetMembership(sess.UserID, req.GroupId)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return protocol.NewErrPayload(protocol.ErrNotMember, "not a member", ctx.Payload)
+		}
+		log.Printf("[SendChat] GetMembership user=%d group=%d error: %v", sess.UserID, req.GroupId, err)
+		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
+	}
+	if gu.IsBan {
+		return protocol.NewErrPayload(protocol.ErrUserBanned, "you are banned in this group", ctx.Payload)
+	}
+
 	g, err := group.FindByID(req.GroupId)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

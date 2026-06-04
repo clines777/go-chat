@@ -210,3 +210,31 @@ func BroadcastToGroup(groupID int, data []byte) {
 		c.TrySend(data)
 	}
 }
+
+// SendToGroupUser 發送資料給特定 user 目前正處於該群場景的所有連線。
+func SendToGroupUser(groupID, userID int, data []byte) {
+	groupSubs.mu.RLock()
+	defer groupSubs.mu.RUnlock()
+
+	for _, c := range groupSubs.byGroup[groupID] {
+		if c.UserId == userID {
+			c.TrySend(data)
+		}
+	}
+}
+
+// EvictGroupUser 將某 user 的連線移出該群場景, 回傳被移出的 connID, 之後群播不再送達。
+func EvictGroupUser(groupID, userID int) []string {
+	groupSubs.mu.Lock()
+	defer groupSubs.mu.Unlock()
+
+	var conns []string
+	for connID, c := range groupSubs.byGroup[groupID] {
+		if c.UserId == userID {
+			delete(groupSubs.byGroup[groupID], connID)
+			delete(groupSubs.byConn, connID)
+			conns = append(conns, connID)
+		}
+	}
+	return conns
+}

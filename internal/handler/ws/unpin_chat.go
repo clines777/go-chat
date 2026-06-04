@@ -16,7 +16,7 @@ func UnpinChat(ctx *ws.Ctx) *protocol.Payload {
 		return protocol.NewErrPayload(protocol.ErrInvalidParam, "invalid request", ctx.Payload)
 	}
 
-	if errPayload := requireGroupOwner(ctx, req.GroupID, "UnpinChat"); errPayload != nil {
+	if errPayload := checkGroupOwner(ctx, req.GroupID, "UnpinChat"); errPayload != nil {
 		return errPayload
 	}
 

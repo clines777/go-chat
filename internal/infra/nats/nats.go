@@ -17,6 +17,9 @@ const SubjectGroupLeave = "group.leave"
 const SubjectGroupPin = "group.pin"
 const SubjectGroupUnpin = "group.unpin"
 const SubjectGroupDel = "group.del"
+const SubjectGroupBan = "group.ban"
+const SubjectGroupUnban = "group.unban"
+const SubjectGroupKick = "group.kick"
 
 var conn *Client
 var consumers []func() error
@@ -58,7 +61,7 @@ func (c *Client) Ping() error {
 func (c *Client) EnsureStreams() error {
 	cfg := &gonats.StreamConfig{
 		Name:     StreamChat,
-		Subjects: []string{SubjectGroupChat, SubjectGroupUpdate, SubjectGroupLeave, SubjectGroupPin, SubjectGroupUnpin, SubjectGroupDel},
+		Subjects: []string{SubjectGroupChat, SubjectGroupUpdate, SubjectGroupLeave, SubjectGroupPin, SubjectGroupUnpin, SubjectGroupDel, SubjectGroupBan, SubjectGroupUnban, SubjectGroupKick},
 		Storage:  gonats.MemoryStorage,
 		MaxAge:   5 * time.Minute,
 	}

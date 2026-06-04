@@ -21,4 +21,7 @@ func init() {
 	ws.Default.Register(protocol.PinChat, &ws.Route{Handler: PinChat})
 	ws.Default.Register(protocol.UnpinChat, &ws.Route{Handler: UnpinChat})
 	ws.Default.Register(protocol.DelChat, &ws.Route{Handler: DelChat})
+	ws.Default.Register(protocol.BanUser, &ws.Route{Handler: BanUser})
+	ws.Default.Register(protocol.UnbanUser, &ws.Route{Handler: UnbanUser})
+	ws.Default.Register(protocol.KickUser, &ws.Route{Handler: KickUser})
 }

@@ -55,6 +55,18 @@ func Register() {
 			fmt.Printf("Failed to subscribe subject: %v\n", err)
 			return err
 		}
+		if err = nc.SubscribeSubject(infranats.SubjectGroupBan, CastBanUser, notifyOpts...); err != nil {
+			fmt.Printf("Failed to subscribe subject: %v\n", err)
+			return err
+		}
+		if err = nc.SubscribeSubject(infranats.SubjectGroupUnban, CastUnbanUser, notifyOpts...); err != nil {
+			fmt.Printf("Failed to subscribe subject: %v\n", err)
+			return err
+		}
+		if err = nc.SubscribeSubject(infranats.SubjectGroupKick, CastKickUser, notifyOpts...); err != nil {
+			fmt.Printf("Failed to subscribe subject: %v\n", err)
+			return err
+		}
 
 		return nil
 	})

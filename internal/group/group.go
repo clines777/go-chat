@@ -21,6 +21,7 @@ var (
 	ErrAlreadyMember  = errors.New("already a member")
 	ErrIsOwner        = errors.New("owner cannot leave the group")
 	ErrNotMember      = errors.New("not a member")
+	ErrTargetOwner    = errors.New("cannot target the group owner")
 )
 
 const (
@@ -345,6 +346,76 @@ func Leave(userID int, groupID int) error {
 	return err
 }
 
+// SetBan 由群主設定/解除成員禁言。target 為群主回傳 ErrTargetOwner, 非成員回傳 ErrNotMember。
+func SetBan(groupID, userID int, ban bool) error {
+	d, err := db.GetDBConn()
+	if err != nil {
+		return err
+	}
+
+	var gu model.GroupUser
+	querySql, args, _ := d.Builder.
+		Select("id", "role_type", "deleted").
+		From("group_user").
+		Where(sq.Eq{"user_id": userID, "group_id": groupID}).
+		Limit(1).ToSql()
+
+	if err := d.DB.Get(&gu, querySql, args...); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotMember
+		}
+		return err
+	}
+	if gu.Deleted {
+		return ErrNotMember
+	}
+	if gu.RoleType == RoleOwner {
+		return ErrTargetOwner
+	}
+
+	_, err = d.Builder.Update("group_user").
+		Set("is_ban", ban).
+		Set("update_time", time.Now().Unix()).
+		Where(sq.Eq{"id": gu.ID}).
+		RunWith(d.DB).Exec()
+	return err
+}
+
+// Kick 由群主將成員移出群組(軟刪除)。target 為群主回傳 ErrTargetOwner, 非成員回傳 ErrNotMember。
+func Kick(groupID, userID int) error {
+	d, err := db.GetDBConn()
+	if err != nil {
+		return err
+	}
+
+	var gu model.GroupUser
+	querySql, args, _ := d.Builder.
+		Select("id", "role_type", "deleted").
+		From("group_user").
+		Where(sq.Eq{"user_id": userID, "group_id": groupID}).
+		Limit(1).ToSql()
+
+	if err := d.DB.Get(&gu, querySql, args...); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotMember
+		}
+		return err
+	}
+	if gu.Deleted {
+		return ErrNotMember
+	}
+	if gu.RoleType == RoleOwner {
+		return ErrTargetOwner
+	}
+
+	_, err = d.Builder.Update("group_user").
+		Set("deleted", true).
+		Set("update_time", time.Now().Unix()).
+		Where(sq.Eq{"id": gu.ID}).
+		RunWith(d.DB).Exec()
+	return err
+}
+
 func Update(groupID int, title, bulletin, remark string) (int, error) {
 	if title == "" && bulletin == "" && remark == "" {
 		return 0, nil
@@ -420,8 +491,4 @@ func GetMyGroups(userID int) ([]protocol.DisplayUserGroup, error) {
 	}
 
 	return rows, nil
-}
-
-func DelGroupMembership(groupID int, userID int) error {
-	return nil
 }

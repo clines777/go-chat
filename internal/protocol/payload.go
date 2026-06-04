@@ -174,6 +174,36 @@ type DelChatCastEvent struct {
 	ChatID  int `json:"chat_id"`
 }
 
+type BanUserReq struct {
+	GroupID int `json:"group_id" validate:"required"`
+	UserID  int `json:"user_id" validate:"required"`
+}
+
+type UnbanUserReq struct {
+	GroupID int `json:"group_id" validate:"required"`
+	UserID  int `json:"user_id" validate:"required"`
+}
+
+type KickUserReq struct {
+	GroupID int `json:"group_id" validate:"required"`
+	UserID  int `json:"user_id" validate:"required"`
+}
+
+type BanUserEvent struct {
+	GroupID int `json:"group_id"`
+	UserID  int `json:"user_id"`
+}
+
+type UnbanUserEvent struct {
+	GroupID int `json:"group_id"`
+	UserID  int `json:"user_id"`
+}
+
+type KickUserEvent struct {
+	GroupID int `json:"group_id"`
+	UserID  int `json:"user_id"`
+}
+
 func NewErrPayload(errCode int, remark string, origin *Payload) *Payload {
 	return &Payload{MsgType: Error, ErrCode: errCode, Remark: remark, Origin: origin}
 }
