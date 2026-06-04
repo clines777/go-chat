@@ -84,6 +84,32 @@ func MarkDeleted(chatID, groupID int) (int, error) {
 	return int(n), err
 }
 
+// FindInGroup 取得單筆未刪除發言 (含作者 username/avatar), 供置頂訊息展示。找不到回傳 sql.ErrNoRows。
+func FindInGroup(chatID, groupID int) (*protocol.ChatInfo, error) {
+	d, err := db.GetDBConn()
+	if err != nil {
+		return nil, err
+	}
+
+	querySql, args, _ := d.Builder.
+		Select(
+			"cr.id", "cr.user_id", "u.username AS username",
+			"COALESCE('/static/avatars/' || av.filename, '') AS avatar_url",
+			"cr.content", "cr.create_time",
+		).
+		From("chat_record cr").
+		Join(`"user" u ON u.id = cr.user_id`).
+		LeftJoin("avatar av ON av.id = u.avatar_id").
+		Where(sq.Eq{"cr.id": chatID, "cr.group_id": groupID, "cr.deleted": false}).
+		Limit(1).ToSql()
+
+	var row protocol.ChatInfo
+	if err := d.DB.Get(&row, querySql, args...); err != nil {
+		return nil, err
+	}
+	return &row, nil
+}
+
 func GetRecentChats(groupID int, limit int) ([]protocol.ChatInfo, error) {
 	d, err := db.GetDBConn()
 	if err != nil {

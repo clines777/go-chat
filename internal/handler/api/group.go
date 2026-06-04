@@ -49,6 +49,13 @@ func GetGroupInfo(c *gin.Context) {
 		coverURL = "/static/group-covers/" + g.CoverFileName
 	}
 
+	bannedIDs, err := group.GetBannedUserIDs(g.ID)
+	if err != nil {
+		log.Printf("[GetGroupInfo] GetBannedUserIDs group=%d error: %v", g.ID, err)
+		c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorUnknown, "系統錯誤", nil).H())
+		return
+	}
+
 	c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorNone, "OK", &protocol.GroupInfoResp{
 		Title:         g.Title,
 		UserTotal:     count,
@@ -58,6 +65,8 @@ func GetGroupInfo(c *gin.Context) {
 		Code:          g.Code,
 		Remark:        g.Remark,
 		CoverURL:      coverURL,
+		PinChatID:     g.PinChatID,
+		BannedUserIDs: bannedIDs,
 	}).H())
 }
 

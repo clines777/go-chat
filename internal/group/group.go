@@ -21,6 +21,7 @@ var (
 	ErrAlreadyMember  = errors.New("already a member")
 	ErrIsOwner        = errors.New("owner cannot leave the group")
 	ErrNotMember      = errors.New("not a member")
+	ErrTargetOwner    = errors.New("cannot target the group owner")
 )
 
 const (
@@ -105,6 +106,26 @@ func GetMembership(userID int, groupID int) (*model.GroupUser, error) {
 	return &gu, nil
 }
 
+// GetBannedUserIDs 回傳群內目前被禁言的成員 user_id 清單, 供群主前端判斷禁言/解除狀態。
+func GetBannedUserIDs(groupID int) ([]int, error) {
+	d, err := db.GetDBConn()
+	if err != nil {
+		return nil, err
+	}
+
+	querySql, args, _ := d.Builder.
+		Select("user_id").
+		From("group_user").
+		Where(sq.Eq{"group_id": groupID, "is_ban": true, "deleted": false}).
+		ToSql()
+
+	ids := make([]int, 0)
+	if err := d.DB.Select(&ids, querySql, args...); err != nil {
+		return nil, err
+	}
+	return ids, nil
+}
+
 func GetMemberCount(groupID int) (int, error) {
 	d, err := db.GetDBConn()
 	if err != nil {
@@ -123,7 +144,7 @@ func GetMemberCount(groupID int) (int, error) {
 var groupColumns = []string{
 	"id", "title", "code", "is_dismiss", "open_join",
 	"user_limit", "owner_user_id", "owner_username",
-	"bulletin", "remark", "visible", "cover_filename",
+	"bulletin", "remark", "visible", "cover_filename", "pin_chat_id",
 }
 
 func FindByID(groupID int) (*model.ChatGroup, error) {
@@ -345,6 +366,76 @@ func Leave(userID int, groupID int) error {
 	return err
 }
 
+// SetBan 由群主設定/解除成員禁言。target 為群主回傳 ErrTargetOwner, 非成員回傳 ErrNotMember。
+func SetBan(groupID, userID int, ban bool) error {
+	d, err := db.GetDBConn()
+	if err != nil {
+		return err
+	}
+
+	var gu model.GroupUser
+	querySql, args, _ := d.Builder.
+		Select("id", "role_type", "deleted").
+		From("group_user").
+		Where(sq.Eq{"user_id": userID, "group_id": groupID}).
+		Limit(1).ToSql()
+
+	if err := d.DB.Get(&gu, querySql, args...); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotMember
+		}
+		return err
+	}
+	if gu.Deleted {
+		return ErrNotMember
+	}
+	if gu.RoleType == RoleOwner {
+		return ErrTargetOwner
+	}
+
+	_, err = d.Builder.Update("group_user").
+		Set("is_ban", ban).
+		Set("update_time", time.Now().Unix()).
+		Where(sq.Eq{"id": gu.ID}).
+		RunWith(d.DB).Exec()
+	return err
+}
+
+// Kick 由群主將成員移出群組(軟刪除)。target 為群主回傳 ErrTargetOwner, 非成員回傳 ErrNotMember。
+func Kick(groupID, userID int) error {
+	d, err := db.GetDBConn()
+	if err != nil {
+		return err
+	}
+
+	var gu model.GroupUser
+	querySql, args, _ := d.Builder.
+		Select("id", "role_type", "deleted").
+		From("group_user").
+		Where(sq.Eq{"user_id": userID, "group_id": groupID}).
+		Limit(1).ToSql()
+
+	if err := d.DB.Get(&gu, querySql, args...); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotMember
+		}
+		return err
+	}
+	if gu.Deleted {
+		return ErrNotMember
+	}
+	if gu.RoleType == RoleOwner {
+		return ErrTargetOwner
+	}
+
+	_, err = d.Builder.Update("group_user").
+		Set("deleted", true).
+		Set("update_time", time.Now().Unix()).
+		Where(sq.Eq{"id": gu.ID}).
+		RunWith(d.DB).Exec()
+	return err
+}
+
 func Update(groupID int, title, bulletin, remark string) (int, error) {
 	if title == "" && bulletin == "" && remark == "" {
 		return 0, nil
@@ -393,6 +484,25 @@ func SetPinChat(groupID, chatID int) (int, error) {
 	return int(n), err
 }
 
+// ClearPinChatIfMatch 當群組目前置頂發言正好是 chatID 時取消置頂 (例如該則被刪除)。回傳受影響筆數。
+func ClearPinChatIfMatch(groupID, chatID int) (int, error) {
+	d, err := db.GetDBConn()
+	if err != nil {
+		return 0, err
+	}
+	r, err := d.Builder.
+		Update("chat_group").
+		Set("pin_chat_id", 0).
+		Set("update_time", time.Now().Unix()).
+		Where(sq.Eq{"id": groupID, "pin_chat_id": chatID}).
+		RunWith(d.DB).Exec()
+	if err != nil {
+		return 0, err
+	}
+	n, err := r.RowsAffected()
+	return int(n), err
+}
+
 func UpdateLastRead(userID, groupID, chatID int) error {
 	d, err := db.GetDBConn()
 	if err != nil {
@@ -420,8 +530,4 @@ func GetMyGroups(userID int) ([]protocol.DisplayUserGroup, error) {
 	}
 
 	return rows, nil
-}
-
-func DelGroupMembership(groupID int, userID int) error {
-	return nil
 }
