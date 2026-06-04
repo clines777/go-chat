@@ -1,7 +1,7 @@
 # gochat
 
 基於 WebSocket 的即時群組聊天服務。單一行程同時跑兩個 server:HTTP (`:9501`) 提供 REST API,WebSocket (`:9502`) 處理即時訊息;群組事件透過 NATS JetStream 廣播、session 存於 Redis。
-由於開發目的僅用於demo，架構直接採all in one.
+由於開發目的僅用於demo(一部分作為面試作品，一部分也為練習之前沒嘗試過的AI coding，此專案為手動與Claude CLI交互開發而成，後端原則上都手寫，AI主要用於code review與協助大規模調整，作為前端頁面的/web/index.html則全由AI處理。)，架構採all in one.
 
 ## 環境需求
 
@@ -37,6 +37,6 @@ psql "$DB_URL" -f db/schema.sql
 go run ./cmd/chatd/main.go
 ```
 
-##前端頁面: 全程由claude編寫, 
+##前端頁面: 
  - 訪問位置:localhost:9501/
  - 毋需驗證, 隨意填入username即可登入
