@@ -5,10 +5,12 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/jackc/pgx/v5/pgconn"
 	"gochat/internal/infra/db"
 	"gochat/internal/model"
 	"gochat/internal/protocol"
@@ -22,7 +24,11 @@ var (
 	ErrIsOwner        = errors.New("owner cannot leave the group")
 	ErrNotMember      = errors.New("not a member")
 	ErrTargetOwner    = errors.New("cannot target the group owner")
+	ErrCodeTaken      = errors.New("group code already taken")
 )
+
+// maxCodeAttempts 自動產碼撞到唯一鍵時的最大重試次數。
+const maxCodeAttempts = 5
 
 const (
 	RoleMember = int8(0)
@@ -41,14 +47,37 @@ func Create(req *protocol.CreateGroupReq, owner *model.User) (int, string, error
 		return 0, "", err
 	}
 
-	code := req.Code
-	if code == "" {
-		code = genCode()
+	// 使用者自訂 code: 不自動更換, 撞到唯一鍵直接回報 ErrCodeTaken。
+	if req.Code != "" {
+		groupID, err := createGroupTx(d, req, owner, req.Code)
+		if err != nil {
+			if isUniqueViolation(err) {
+				return 0, "", ErrCodeTaken
+			}
+			return 0, "", err
+		}
+		return groupID, req.Code, nil
 	}
 
+	// 自動產碼: 此 tx 內唯一可能的唯一鍵衝突就是 code, 撞到就換一組重試。
+	for attempt := 0; attempt < maxCodeAttempts; attempt++ {
+		code := genCode()
+		groupID, err := createGroupTx(d, req, owner, code)
+		if err == nil {
+			return groupID, code, nil
+		}
+		if !isUniqueViolation(err) {
+			return 0, "", err
+		}
+	}
+	return 0, "", fmt.Errorf("group: 連續 %d 次自動產生的 code 都衝突", maxCodeAttempts)
+}
+
+// createGroupTx 在單一交易內建立群組與群主 membership。
+func createGroupTx(d *db.DB, req *protocol.CreateGroupReq, owner *model.User, code string) (int, error) {
 	tx, err := d.DB.Beginx()
 	if err != nil {
-		return 0, "", err
+		return 0, err
 	}
 
 	var groupID int
@@ -64,7 +93,7 @@ func Create(req *protocol.CreateGroupReq, owner *model.User) (int, string, error
 		Scan(&groupID)
 	if err != nil {
 		tx.Rollback()
-		return 0, "", err
+		return 0, err
 	}
 
 	_, err = d.Builder.
@@ -75,15 +104,21 @@ func Create(req *protocol.CreateGroupReq, owner *model.User) (int, string, error
 		Exec()
 	if err != nil {
 		tx.Rollback()
-		return 0, "", err
+		return 0, err
 	}
 
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()
-		return 0, "", err
+		return 0, err
 	}
 
-	return groupID, code, nil
+	return groupID, nil
+}
+
+// isUniqueViolation 回報 err 是否為 Postgres 唯一鍵衝突 (SQLSTATE 23505)。
+func isUniqueViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23505"
 }
 
 func GetMembership(userID int, groupID int) (*model.GroupUser, error) {

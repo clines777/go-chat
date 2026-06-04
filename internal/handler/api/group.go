@@ -93,6 +93,10 @@ func CreateGroup(c *gin.Context) {
 
 	groupID, code, err := group.Create(&req, owner)
 	if err != nil {
+		if errors.Is(err, group.ErrCodeTaken) {
+			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrInvalidParam, "邀請碼已被使用", nil).H())
+			return
+		}
 		log.Printf("[CreateGroup] Create user=%d title=%q error: %v", userID, req.Title, err)
 		c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorUnknown, "建立群組失敗", nil).H())
 		return
