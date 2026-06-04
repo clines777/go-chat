@@ -11,6 +11,7 @@ import (
 	"gochat/internal/ws"
 )
 
+// DelChat 群主刪除群內留言
 func DelChat(ctx *ws.Ctx) *protocol.Payload {
 	var req protocol.DelChatReq
 	if err := json.Unmarshal(ctx.Payload.Data, &req); err != nil || req.GroupID == 0 || req.ChatID == 0 {

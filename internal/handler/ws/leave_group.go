@@ -13,7 +13,7 @@ import (
 	"gochat/internal/ws"
 )
 
-// LeaveGroup - 用戶退出所屬群,
+// LeaveGroup - 用戶退出指定所屬群
 func LeaveGroup(ctx *ws.Ctx) *protocol.Payload {
 	var req protocol.LeaveGroupReq
 	if err := json.Unmarshal(ctx.Payload.Data, &req); err != nil || req.GroupID <= 0 {

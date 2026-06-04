@@ -35,12 +35,14 @@ const (
 	RoleOwner  = int8(1)
 )
 
+// genCode 生成群代號
 func genCode() string {
 	b := make([]byte, 5)
 	_, _ = rand.Read(b)
 	return strings.ToUpper(hex.EncodeToString(b))
 }
 
+// Create 新增群組.
 func Create(req *protocol.CreateGroupReq, owner *model.User) (int, string, error) {
 	d, err := db.GetDBConn()
 	if err != nil {
@@ -73,7 +75,7 @@ func Create(req *protocol.CreateGroupReq, owner *model.User) (int, string, error
 	return 0, "", fmt.Errorf("group: 連續 %d 次自動產生的 code 都衝突", maxCodeAttempts)
 }
 
-// createGroupTx 在單一交易內建立群組與群主 membership。
+// createGroupTx 寫入新群組並綁定owner.
 func createGroupTx(d *db.DB, req *protocol.CreateGroupReq, owner *model.User, code string) (int, error) {
 	tx, err := d.DB.Beginx()
 	if err != nil {
@@ -115,7 +117,7 @@ func createGroupTx(d *db.DB, req *protocol.CreateGroupReq, owner *model.User, co
 	return groupID, nil
 }
 
-// isUniqueViolation 回報 err 是否為 Postgres 唯一鍵衝突 (SQLSTATE 23505)。
+// isUniqueViolation 檢查err是否為postgresql unique衝突
 func isUniqueViolation(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == "23505"

@@ -9,6 +9,7 @@ import (
 	"gochat/internal/ws"
 )
 
+// UpdateLastRead 更新用戶指定群最後已讀訊息ID
 func UpdateLastRead(ctx *ws.Ctx) *protocol.Payload {
 	var req protocol.UpdateLastReadReq
 	if err := json.Unmarshal(ctx.Payload.Data, &req); err != nil || req.GroupID <= 0 || req.ChatID <= 0 {

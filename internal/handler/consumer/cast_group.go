@@ -9,6 +9,7 @@ import (
 	"log"
 )
 
+// CastLeaveGroup 轉發用戶退群通知. 純通知, AckNone
 func CastLeaveGroup(msg *gonats.Msg) {
 	var event protocol.LeaveGroupEvent
 	if err := json.Unmarshal(msg.Data, &event); err != nil {
@@ -86,7 +87,7 @@ func CastUnpinChat(msg *gonats.Msg) {
 	ws.BroadcastToGroup(event.GroupID, castMsg)
 }
 
-// CastDelChat - 轉發發言刪除, 純通知, AckNone
+// CastDelChat - 轉發聊天訊息刪除, 純通知, AckNone
 func CastDelChat(msg *gonats.Msg) {
 	var event protocol.DelChatCastEvent
 	if err := json.Unmarshal(msg.Data, &event); err != nil {

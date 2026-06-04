@@ -15,6 +15,7 @@ import (
 	"gochat/internal/ws"
 )
 
+// SendChat 群內用戶發聊天訊息
 func SendChat(ctx *ws.Ctx) *protocol.Payload {
 	var req protocol.SendChatReq
 	if err := json.Unmarshal(ctx.Payload.Data, &req); err != nil || req.GroupId == 0 || req.Content == "" {

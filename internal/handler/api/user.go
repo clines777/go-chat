@@ -11,8 +11,13 @@ import (
 	"gochat/internal/user"
 )
 
+// GetUserSelfInfo 取得登入用戶資訊
 func GetUserSelfInfo(c *gin.Context) {
-	userID := c.MustGet("user_id").(int)
+	userID, ok := getContextUID(c)
+	if !ok {
+		c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrUnauthorized, "驗證失敗", nil).H())
+		return
+	}
 
 	u, err := user.FindByID(userID)
 	if err != nil {
@@ -37,8 +42,4 @@ func GetUserSelfInfo(c *gin.Context) {
 		CreateTime: u.CreateTime,
 		Code:       u.Code,
 	}).H())
-}
-
-func ForbidUser(c *gin.Context) {
-
 }

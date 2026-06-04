@@ -12,7 +12,6 @@ type Session struct {
 	UserID    int            `json:"user_id"`
 	ConnID    string         `json:"conn_id"`
 	Username  string         `json:"username"`
-	ApiToken  string         `json:"api_token"`
 }
 
 func Get(userID int, connID string) *Session {

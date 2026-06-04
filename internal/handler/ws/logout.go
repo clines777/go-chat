@@ -14,7 +14,7 @@ type logoutReq struct {
 	ResumeToken string `json:"resume_token"`
 }
 
-// Logout - 方便測試時換帳號用.
+// Logout - 前端頁面加了一個登出鈕, 方便測試時換帳號用.
 func Logout(ctx *ws.Ctx) *protocol.Payload {
 	var req logoutReq
 	_ = json.Unmarshal(ctx.Payload.Data, &req)
@@ -25,8 +25,8 @@ func Logout(ctx *ws.Ctx) *protocol.Payload {
 		r := redis.GetRedis()
 		_ = r.Del(protocol.SessionKey(ctx.Client.UserId, ctx.Client.ConnID))
 		_ = r.Del(protocol.ResumeTokenKey(req.ResumeToken))
-		if sess != nil && sess.ApiToken != "" {
-			_ = r.Del(protocol.ApiTokenKey(sess.ApiToken))
+		if ctx.Client.ApiToken != "" {
+			_ = r.Del(protocol.ApiTokenKey(ctx.Client.ApiToken))
 		}
 	}
 

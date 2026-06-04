@@ -78,7 +78,11 @@ func CreateGroup(c *gin.Context) {
 		return
 	}
 
-	userID := c.MustGet("user_id").(int)
+	userID, ok := getContextUID(c)
+	if !ok {
+		c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrUnauthorized, "驗證失敗", nil).H())
+		return
+	}
 
 	owner, err := user.FindByID(userID)
 	if err != nil {
@@ -94,7 +98,7 @@ func CreateGroup(c *gin.Context) {
 	groupID, code, err := group.Create(&req, owner)
 	if err != nil {
 		if errors.Is(err, group.ErrCodeTaken) {
-			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrInvalidParam, "邀請碼已被使用", nil).H())
+			c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrInvalidParam, "群代號已被使用", nil).H())
 			return
 		}
 		log.Printf("[CreateGroup] Create user=%d title=%q error: %v", userID, req.Title, err)
@@ -125,7 +129,11 @@ func UploadGroupCover(c *gin.Context) {
 		return
 	}
 
-	userID := c.MustGet("user_id").(int)
+	userID, ok := getContextUID(c)
+	if !ok {
+		c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrUnauthorized, "驗證失敗", nil).H())
+		return
+	}
 
 	membership, err := group.GetMembership(userID, groupID)
 	if err != nil {

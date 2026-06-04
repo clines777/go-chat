@@ -12,6 +12,7 @@ import (
 	"gochat/internal/ws"
 )
 
+// EnterSelf - 用戶進入我的資訊場景.
 func EnterSelf(ctx *ws.Ctx) *protocol.Payload {
 	sess := session.Get(ctx.Client.UserId, ctx.Client.ConnID)
 

@@ -14,6 +14,7 @@ import (
 	"gochat/internal/ws"
 )
 
+// JoinGroup - 用戶加入群組成員
 func JoinGroup(ctx *ws.Ctx) *protocol.Payload {
 	var req protocol.JoinGroupReq
 	if err := json.Unmarshal(ctx.Payload.Data, &req); err != nil || req.GroupID <= 0 {

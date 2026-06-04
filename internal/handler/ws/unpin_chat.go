@@ -10,6 +10,7 @@ import (
 	"gochat/internal/ws"
 )
 
+// UnpinChat 取消置頂消息
 func UnpinChat(ctx *ws.Ctx) *protocol.Payload {
 	var req protocol.UnpinChatReq
 	if err := json.Unmarshal(ctx.Payload.Data, &req); err != nil || req.GroupID == 0 {

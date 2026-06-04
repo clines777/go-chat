@@ -41,7 +41,11 @@ func SetAvatar(c *gin.Context) {
 		return
 	}
 
-	userID := c.MustGet("user_id").(int)
+	userID, ok := getContextUID(c)
+	if !ok {
+		c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrUnauthorized, "驗證失敗", nil).H())
+		return
+	}
 
 	if err := user.UpdateAvatar(userID, req.AvatarId); err != nil {
 		log.Printf("[SetAvatar] UpdateAvatar user=%d avatar=%d error: %v", userID, req.AvatarId, err)
