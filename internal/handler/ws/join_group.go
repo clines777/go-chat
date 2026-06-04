@@ -78,10 +78,13 @@ func JoinGroup(ctx *ws.Ctx) *protocol.Payload {
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
 	}
 
+	pinChat := FindPinChat(req.GroupID, g.PinChatID)
 	respData, err := json.Marshal(&protocol.EnterGroupResp{
 		Title:          g.Title,
 		GroupId:        req.GroupID,
 		GroupUserCount: count,
+		PinChat:        pinChat,
+		SelfBanned:     false,
 		Chats:          chats,
 	})
 	if err != nil {

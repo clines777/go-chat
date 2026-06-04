@@ -116,6 +116,8 @@ type EnterGroupResp struct {
 	Title          string     `json:"title"`
 	GroupId        int        `json:"group_id"`
 	GroupUserCount int        `json:"group_user_count"`
+	PinChat        *ChatInfo  `json:"pin_chat,omitempty"`
+	SelfBanned     bool       `json:"self_banned"`
 	Chats          []ChatInfo `json:"chats"`
 }
 
@@ -137,6 +139,8 @@ type GroupInfoResp struct {
 	Code          string `json:"code"`
 	Remark        string `json:"remark"`
 	CoverURL      string `json:"cover_url"`
+	PinChatID     int    `json:"pin_chat_id"`
+	BannedUserIDs []int  `json:"banned_user_ids"`
 }
 
 type UpdateGroupCastEvent struct {

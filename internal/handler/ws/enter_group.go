@@ -24,7 +24,7 @@ func EnterGroup(ctx *ws.Ctx) *protocol.Payload {
 
 	sess := session.Get(ctx.Client.UserId, ctx.Client.ConnID)
 
-	_, err := group.GetMembership(sess.UserID, req.GroupID)
+	gu, err := group.GetMembership(sess.UserID, req.GroupID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return protocol.NewErrPayload(protocol.ErrNotMember, "not a member", ctx.Payload)
@@ -63,12 +63,17 @@ func EnterGroup(ctx *ws.Ctx) *protocol.Payload {
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
 	}
 
-	respData, err := json.Marshal(&protocol.EnterGroupResp{
+	pinChat := FindPinChat(req.GroupID, g.PinChatID)
+	resp := &protocol.EnterGroupResp{
 		Title:          g.Title,
 		GroupId:        req.GroupID,
 		GroupUserCount: count,
+		SelfBanned:     gu.IsBan,
 		Chats:          chats,
-	})
+		PinChat:        pinChat,
+	}
+
+	respData, err := json.Marshal(resp)
 	if err != nil {
 		log.Printf("[EnterGroup] marshal error: %v", err)
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)

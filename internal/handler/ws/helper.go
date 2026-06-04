@@ -3,6 +3,7 @@ package handler
 import (
 	"database/sql"
 	"errors"
+	"gochat/internal/chat"
 	"gochat/internal/group"
 	"gochat/internal/protocol"
 	"gochat/internal/session"
@@ -28,4 +29,19 @@ func checkGroupOwner(ctx *ws.Ctx, groupID int, tag string) *protocol.Payload {
 		return protocol.NewErrPayload(protocol.ErrUnauthorized, "not the owner", ctx.Payload)
 	}
 	return nil
+}
+
+// FindPinChat 解析群組置頂訊息: 回傳有效的 pinChatID (置頂訊息已刪除或不存在時為 0) 與訊息本體。
+func FindPinChat(groupID, pinChatID int) *protocol.ChatInfo {
+	if pinChatID <= 0 {
+		return nil
+	}
+	c, err := chat.FindInGroup(pinChatID, groupID)
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			log.Printf("FindPinChat group=%d pin=%d error: %v", groupID, pinChatID, err)
+		}
+		return nil
+	}
+	return c
 }

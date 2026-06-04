@@ -705,6 +705,62 @@
       transition: background .15s, color .15s;
     }
     .leave-btn:hover { background: #e05252; color: #fff; }
+
+    /* ── Message moderation menu ── */
+    .message { position: relative; }
+    .msg-actions { position: absolute; top: 4px; right: 6px; }
+    .msg-action-btn {
+      background: var(--bg-s0); border: 1px solid var(--bg-s1);
+      color: var(--subtext); cursor: pointer;
+      width: 26px; height: 22px; border-radius: 6px;
+      font-size: 14px; line-height: 1; opacity: 0;
+      transition: opacity .12s, color .12s;
+    }
+    .message:hover .msg-action-btn { opacity: 1; }
+    .msg-action-btn:hover { color: var(--text); }
+    .msg-menu {
+      position: absolute; top: 26px; right: 0;
+      background: var(--bg-sidebar); border: 1px solid var(--border);
+      border-radius: 9px; padding: 5px; min-width: 132px;
+      box-shadow: 0 12px 32px rgba(0,0,0,.45); z-index: 50;
+      display: flex; flex-direction: column; gap: 1px;
+    }
+    .msg-menu-item {
+      background: none; border: none; text-align: left;
+      color: var(--text); font-size: 13px; padding: 8px 10px;
+      border-radius: 6px; cursor: pointer; white-space: nowrap;
+      transition: background .12s;
+    }
+    .msg-menu-item:hover { background: var(--bg-s0); }
+    .msg-menu-item.danger { color: var(--red); }
+    .msg-menu-item.danger:hover { background: rgba(243,139,168,.14); }
+    .msg-menu-sep { height: 1px; background: var(--border); margin: 4px 2px; }
+    .message.pinned { background: rgba(203,166,247,.08); }
+
+    /* ── Pinned banner ── */
+    .pin-banner {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 24px; border-bottom: 1px solid var(--border);
+      background: rgba(203,166,247,.06); flex-shrink: 0;
+    }
+    .pin-ico { font-size: 14px; flex-shrink: 0; }
+    .pin-content { flex: 1; min-width: 0; display: flex; gap: 8px; align-items: baseline; overflow: hidden; }
+    .pin-user { font-size: 12px; font-weight: 700; color: var(--accent2); flex-shrink: 0; }
+    .pin-text { font-size: 13px; color: var(--subtext); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pin-text.muted { font-style: italic; color: var(--muted); }
+    .pin-unbtn {
+      background: none; border: none; color: var(--muted);
+      cursor: pointer; font-size: 13px; padding: 3px 6px; border-radius: 5px;
+      flex-shrink: 0; transition: color .12s, background .12s;
+    }
+    .pin-unbtn:hover { color: var(--red); background: rgba(243,139,168,.12); }
+
+    /* ── Banned input notice ── */
+    .banned-notice {
+      flex: 1; text-align: center; color: var(--muted);
+      font-size: 13px; padding: 11px; background: var(--bg-s0);
+      border: 1px solid var(--bg-s1); border-radius: 11px;
+    }
   </style>
 </head>
 <body>
@@ -828,6 +884,18 @@
           </div>
         </div>
 
+        <div v-if="currentGroup.pinChatId" class="pin-banner">
+          <span class="pin-ico">📌</span>
+          <div class="pin-content">
+            <template v-if="pinnedChat">
+              <span class="pin-user">{{ pinnedChat.username }}</span>
+              <span class="pin-text">{{ pinnedChat.content }}</span>
+            </template>
+            <span v-else class="pin-text muted">已置頂一則訊息</span>
+          </div>
+          <button v-if="isGroupOwner" class="pin-unbtn" @click="unpinChat" title="取消置頂">✕</button>
+        </div>
+
         <div class="messages" ref="msgsRef">
           <div v-if="!currentGroup.chats.length" class="msg-empty">
             <div class="e-icon">🌱</div>
@@ -835,7 +903,7 @@
           </div>
           <div
             v-for="m in currentGroup.chats" :key="m.id"
-            class="message"
+            class="message" :class="{pinned: m.id === currentGroup.pinChatId}"
           >
             <div class="msg-ava">
               <img v-if="m.avatarUrl" :src="m.avatarUrl" :alt="m.username" />
@@ -849,19 +917,39 @@
               </div>
               <div class="msg-text">{{ m.content }}</div>
             </div>
+
+            <div v-if="isGroupOwner" class="msg-actions" @click.stop>
+              <button class="msg-action-btn" @click="toggleMsgMenu(m.id)" title="管理">⋯</button>
+              <div v-if="openMenuMsgId === m.id" class="msg-menu">
+                <button class="msg-menu-item" @click="m.id === currentGroup.pinChatId ? unpinChat() : pinChat(m)">
+                  {{ m.id === currentGroup.pinChatId ? '取消置頂' : '置頂訊息' }}
+                </button>
+                <button class="msg-menu-item" @click="delChat(m)">刪除訊息</button>
+                <template v-if="m.userId && m.userId !== groupInfo.ownerUserId">
+                  <div class="msg-menu-sep"></div>
+                  <button class="msg-menu-item" @click="bannedUserIds.has(m.userId) ? unbanUser(m) : banUser(m)">
+                    {{ bannedUserIds.has(m.userId) ? '解除禁言' : '禁言' }}
+                  </button>
+                  <button class="msg-menu-item danger" @click="kickUser(m)">踢出群組</button>
+                </template>
+              </div>
+            </div>
           </div>
         </div>
 
         <div class="input-area">
-          <div class="chat-input-wrap">
-            <input
-              class="chat-input"
-              v-model="chatInput"
-              :placeholder="`在 #${currentGroup.title} 中發送訊息…`"
-              @keydown.enter.prevent="sendChat"
-            />
-          </div>
-          <button class="send-btn" @click="sendChat" :disabled="!chatInput.trim()">發送</button>
+          <div v-if="selfBanned" class="banned-notice">🔇 你已被群主禁言，無法在此群組發言</div>
+          <template v-else>
+            <div class="chat-input-wrap">
+              <input
+                class="chat-input"
+                v-model="chatInput"
+                :placeholder="`在 #${currentGroup.title} 中發送訊息…`"
+                @keydown.enter.prevent="sendChat"
+              />
+            </div>
+            <button class="send-btn" @click="sendChat" :disabled="!chatInput.trim()">發送</button>
+          </template>
         </div>
       </div>
     </main>
@@ -1076,7 +1164,24 @@ createApp({
 
     const myGroupIds = computed(() => new Set(myGroups.value.map(g => g.id)));
 
-    const currentGroup = reactive({ id: 0, title: '', memberCount: 0, chats: [] });
+    const currentGroup = reactive({ id: 0, title: '', memberCount: 0, chats: [], pinChatId: 0, pinChat: null });
+
+    // ── Moderation state ──
+    const selfBanned    = ref(false);          // 當前使用者是否在此群被禁言
+    const bannedUserIds = ref(new Set());      // 群主視角: 群內被禁言的成員 user_id
+    const openMenuMsgId = ref(null);           // 目前展開操作選單的訊息 id
+    // 操作送出後 *_ok 無回傳 user_id, 暫存待套用的目標
+    let pendingBan = null, pendingUnban = null, pendingKick = null;
+
+    const pinnedChat = computed(() => {
+      if (!currentGroup.pinChatId) return null;
+      // 優先用聊天列表中的訊息, 找不到 (舊訊息未載入) 則用後端帶回的本體
+      const inList = currentGroup.chats.find(c => c.id === currentGroup.pinChatId);
+      if (inList) return inList;
+      return currentGroup.pinChat && currentGroup.pinChat.id === currentGroup.pinChatId
+        ? currentGroup.pinChat
+        : null;
+    });
 
     const chatInput = ref('');
     const msgsRef   = ref(null);
@@ -1177,7 +1282,11 @@ createApp({
           currentGroup.title       = data.title;
           currentGroup.memberCount = data.group_user_count;
           currentGroup.chats       = (data.chats || []).map(normalizeHistory);
+          currentGroup.pinChatId   = data.pin_chat ? data.pin_chat.id : 0;
+          currentGroup.pinChat     = data.pin_chat ? normalizeHistory(data.pin_chat) : null;
           currentGroupId.value     = data.group_id;
+          selfBanned.value         = !!data.self_banned;
+          openMenuMsgId.value      = null;
           scrollToBottom();
           if (data.chats?.length) {
             const lastId = data.chats[data.chats.length - 1].ID;
@@ -1198,7 +1307,12 @@ createApp({
           currentGroup.title       = data.title;
           currentGroup.memberCount = data.group_user_count;
           currentGroup.chats       = (data.chats || []).map(normalizeHistory);
+          currentGroup.pinChatId   = data.pin_chat_id || 0;
+          currentGroup.pinChat     = data.pin_chat ? normalizeHistory(data.pin_chat) : null;
           currentGroupId.value     = data.group_id;
+          selfBanned.value         = false;
+          bannedUserIds.value      = new Set();
+          openMenuMsgId.value      = null;
           if (!myGroupIds.value.has(data.group_id)) {
             myGroups.value.push({
               id: data.group_id, title: data.title,
@@ -1216,9 +1330,13 @@ createApp({
           myGroups.value = myGroups.value.filter(g => g.id !== leftId);
           if (currentGroupId.value === leftId) {
             currentGroupId.value = null;
-            currentGroup.id      = null;
-            currentGroup.title   = '';
-            currentGroup.chats   = [];
+            currentGroup.id        = null;
+            currentGroup.title     = '';
+            currentGroup.chats     = [];
+            currentGroup.pinChatId = 0;
+            currentGroup.pinChat   = null;
+            selfBanned.value       = false;
+            bannedUserIds.value    = new Set();
             Object.assign(groupInfo, { title: '', userTotal: 0, bulletin: '', ownerUsername: '', ownerUserID: 0, code: '', remark: '', coverUrl: '' });
           }
           showToast('已離開群組');
@@ -1252,6 +1370,87 @@ createApp({
             groupInfo.title    = data.title;
             const mg = myGroups.value.find(g => g.id === data.group_id);
             if (mg) mg.title = data.title;
+          }
+          break;
+
+        // ── Pin / Unpin ──
+        case 'pin_chat_ok':
+          showToast('已置頂訊息 ✓');
+          break;
+
+        case 'unpin_chat_ok':
+          showToast('已取消置頂');
+          break;
+
+        case 'pin_chat_cast':
+          if (data && data.group_id === currentGroup.id) currentGroup.pinChatId = data.chat_id;
+          break;
+
+        case 'unpin_chat_cast':
+          if (data && data.group_id === currentGroup.id) currentGroup.pinChatId = 0;
+          break;
+
+        // ── Delete chat ──
+        case 'del_chat_ok':
+          showToast('訊息已刪除 ✓');
+          break;
+
+        case 'del_chat_cast':
+          if (data && data.group_id === currentGroup.id) {
+            currentGroup.chats = currentGroup.chats.filter(c => c.id !== data.chat_id);
+            if (currentGroup.pinChatId === data.chat_id) currentGroup.pinChatId = 0;
+          }
+          break;
+
+        // ── Ban / Unban / Kick (群主收到的確認) ──
+        case 'ban_user_ok':
+          if (pendingBan != null) { bannedUserIds.value.add(pendingBan); pendingBan = null; }
+          showToast('已禁言該成員 ✓');
+          break;
+
+        case 'unban_user_ok':
+          if (pendingUnban != null) { bannedUserIds.value.delete(pendingUnban); pendingUnban = null; }
+          showToast('已解除禁言 ✓');
+          break;
+
+        case 'kick_user_ok':
+          if (pendingKick != null) { bannedUserIds.value.delete(pendingKick); pendingKick = null; }
+          showToast('已將成員移出群組 ✓');
+          break;
+
+        // ── Ban / Unban / Kick (被處理者收到的通知) ──
+        case 'ban_user_ack':
+          if (data && data.group_id === currentGroup.id) selfBanned.value = true;
+          showToast('你已被群主禁言');
+          break;
+
+        case 'unban_user_ack':
+          if (data && data.group_id === currentGroup.id) selfBanned.value = false;
+          showToast('群主已解除你的禁言');
+          break;
+
+        case 'kick_user_ack': {
+          const kickId = data?.group_id;
+          myGroups.value = myGroups.value.filter(g => g.id !== kickId);
+          if (currentGroupId.value === kickId) {
+            currentGroupId.value = null;
+            currentGroup.id        = null;
+            currentGroup.title     = '';
+            currentGroup.chats     = [];
+            currentGroup.pinChatId = 0;
+            currentGroup.pinChat   = null;
+            selfBanned.value       = false;
+            Object.assign(groupInfo, { title: '', userTotal: 0, bulletin: '', ownerUsername: '', ownerUserId: 0, code: '', remark: '', coverUrl: '' });
+          }
+          showToast('你已被移出群組');
+          break;
+        }
+
+        case 'kick_user_cast':
+          if (data && data.group_id === currentGroup.id) {
+            if (currentGroup.memberCount > 0) currentGroup.memberCount--;
+            if (groupInfo.userTotal) groupInfo.userTotal--;
+            bannedUserIds.value.delete(data.user_id);
           }
           break;
 
@@ -1353,6 +1552,11 @@ createApp({
 
     function enterGroup(groupId) {
       currentGroup.chats = [];
+      currentGroup.pinChatId = 0;
+      currentGroup.pinChat = null;
+      selfBanned.value    = false;
+      bannedUserIds.value = new Set();
+      openMenuMsgId.value = null;
       groupInfo.title = ''; groupInfo.userTotal = null; groupInfo.bulletin = '';
       groupInfo.ownerUsername = ''; groupInfo.ownerUserId = 0; groupInfo.code = '';
       groupInfo.remark = ''; groupInfo.coverUrl = '';
@@ -1376,6 +1580,8 @@ createApp({
           groupInfo.code          = d.code           || '';
           groupInfo.remark        = d.remark         || '';
           groupInfo.coverUrl      = d.cover_url      || '';
+          // 群主管理判斷用: 被禁言成員清單 (置頂訊息以 WS enter_group_ok 為準)
+          bannedUserIds.value     = new Set(d.banned_user_ids || []);
         }
       } catch {}
     }
@@ -1560,6 +1766,57 @@ createApp({
       wsSend('leave_group', { group_id: currentGroupId.value });
     }
 
+    // ── 群主管理操作 (置頂 / 刪除 / 禁言 / 踢出) ──
+
+    function toggleMsgMenu(id) {
+      openMenuMsgId.value = openMenuMsgId.value === id ? null : id;
+    }
+    function closeMsgMenu() { openMenuMsgId.value = null; }
+
+    function pinChat(m) {
+      if (!currentGroup.id) return;
+      wsSend('pin_chat', { group_id: currentGroup.id, chat_id: m.id });
+      closeMsgMenu();
+    }
+
+    function unpinChat() {
+      if (!currentGroup.id) return;
+      wsSend('unpin_chat', { group_id: currentGroup.id });
+      closeMsgMenu();
+    }
+
+    function delChat(m) {
+      if (!currentGroup.id) return;
+      closeMsgMenu();
+      if (!confirm('確定刪除這則訊息嗎？')) return;
+      wsSend('del_chat', { group_id: currentGroup.id, chat_id: m.id });
+    }
+
+    function banUser(m) {
+      if (!currentGroup.id) return;
+      closeMsgMenu();
+      pendingBan = m.userId;
+      wsSend('ban_user', { group_id: currentGroup.id, user_id: m.userId });
+    }
+
+    function unbanUser(m) {
+      if (!currentGroup.id) return;
+      closeMsgMenu();
+      pendingUnban = m.userId;
+      wsSend('unban_user', { group_id: currentGroup.id, user_id: m.userId });
+    }
+
+    function kickUser(m) {
+      if (!currentGroup.id) return;
+      closeMsgMenu();
+      if (!confirm(`確定將 ${m.username} 移出群組嗎？`)) return;
+      pendingKick = m.userId;
+      wsSend('kick_user', { group_id: currentGroup.id, user_id: m.userId });
+    }
+
+    // 點擊頁面其他區域關閉操作選單
+    window.addEventListener('click', () => { openMenuMsgId.value = null; });
+
     // ── Logout ──
 
     function logout() {
@@ -1574,9 +1831,14 @@ createApp({
       currentGroupId.value = null;
       myGroups.value       = [];
       lobbyGroups.value    = [];
-      currentGroup.id      = null;
-      currentGroup.title   = '';
-      currentGroup.chats   = [];
+      currentGroup.id        = null;
+      currentGroup.title     = '';
+      currentGroup.chats     = [];
+      currentGroup.pinChatId = 0;
+      currentGroup.pinChat   = null;
+      selfBanned.value       = false;
+      bannedUserIds.value    = new Set();
+      openMenuMsgId.value    = null;
       Object.assign(user, { id: 0, username: '', apiToken: '', resumeToken: '', avatarUrl: '' });
       Object.assign(groupInfo, { title: '', userTotal: 0, bulletin: '', ownerUsername: '', ownerUserID: 0, code: '', remark: '', coverUrl: '' });
     }
@@ -1598,6 +1860,8 @@ createApp({
       showUpdateGroup, updateGroupForm, openUpdateGroup, submitUpdateGroup,
       copyCode,
       triggerCoverUpload, handleCoverUpload,
+      selfBanned, bannedUserIds, openMenuMsgId, pinnedChat,
+      toggleMsgMenu, pinChat, unpinChat, delChat, banUser, unbanUser, kickUser,
     };
   },
 }).mount('#app');
