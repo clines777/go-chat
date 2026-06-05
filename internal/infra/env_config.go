@@ -5,17 +5,17 @@ import (
 	"github.com/joho/godotenv"
 	"log"
 	"os"
+	"sync"
 	"time"
 )
 
-var cfg *EnvConfig
+var envOnce = sync.OnceValue(loadEnvConfig)
 
 func GetEnvConfig() *EnvConfig {
+	return envOnce()
+}
 
-	if cfg != nil {
-		return cfg
-	}
-
+func loadEnvConfig() *EnvConfig {
 	envPath := ".env"
 	_, envFileErr := os.Stat(envPath)
 	if !os.IsNotExist(envFileErr) {
@@ -33,8 +33,7 @@ func GetEnvConfig() *EnvConfig {
 	}
 	c.ServerName = hostname
 
-	cfg = &c
-	return cfg
+	return &c
 }
 
 type EnvConfig struct {
@@ -57,4 +56,7 @@ type EnvConfig struct {
 
 	NatsURL    string `env:"NATS_URL" envDefault:"nats://127.0.0.1:4222"`
 	ServerName string `env:"SERVER_NAME" envDefault:"s1"`
+
+	// WSAllowedOrigins WS CheckOrigin white list。本地留空
+	WSAllowedOrigins []string `env:"WS_ALLOWED_ORIGINS" envSeparator:","`
 }

@@ -209,22 +209,23 @@ func updateUser(u *model.User) (*model.User, error) {
 	return u, nil
 }
 
-func Exists(userId int) bool {
+func Exists(userId int) (bool, error) {
 	d, err := db.GetDBConn()
 	if err != nil {
-		return false
+		return false, err
 	}
 
-	var count int
-	err = d.Builder.Select("1").
+	querySql, args, _ := d.Builder.Select("1").
 		From(`"user"`).
-		Where("user.id = ?", userId).
-		Limit(1).
-		QueryRow().Scan(&count)
+		Where(sq.Eq{"id": userId}).
+		Limit(1).ToSql()
 
-	if errors.Is(err, sql.ErrNoRows) {
-		return false
+	var one int
+	if err := d.DB.Get(&one, querySql, args...); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
+		return false, err
 	}
-
-	return err != nil
+	return true, nil
 }

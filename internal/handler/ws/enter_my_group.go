@@ -20,7 +20,7 @@ func EnterMyGroup(ctx *ws.Ctx) *protocol.Payload {
 		}
 	}
 
-	sess := session.Get(ctx.Client.UserId, ctx.Client.ConnID)
+	sess := ctx.Session
 
 	groups, err := group.GetMyGroupsPaged(sess.UserID, req.Page)
 	if err != nil {

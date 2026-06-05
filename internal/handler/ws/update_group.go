@@ -9,7 +9,6 @@ import (
 
 	"gochat/internal/group"
 	"gochat/internal/protocol"
-	"gochat/internal/session"
 	"gochat/internal/ws"
 )
 
@@ -24,7 +23,7 @@ func UpdateGroup(ctx *ws.Ctx) *protocol.Payload {
 		return &protocol.Payload{MsgType: protocol.UpdateGroupOk, Meta: ctx.Payload.Meta}
 	}
 
-	sess := session.Get(ctx.Client.UserId, ctx.Client.ConnID)
+	sess := ctx.Session
 
 	gu, err := group.GetMembership(sess.UserID, req.GroupID)
 	if err != nil {

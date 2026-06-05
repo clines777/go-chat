@@ -5,11 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
+	"net/url"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
+	"gochat/internal/infra"
 	"gochat/internal/infra/redis"
 	"gochat/internal/protocol"
 )
@@ -24,7 +28,34 @@ const (
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
-	CheckOrigin:     func(r *http.Request) bool { return true },
+	CheckOrigin:     checkOrigin,
+}
+
+// checkOrigin WS CheckOrigin, 防止跨站。
+func checkOrigin(r *http.Request) bool {
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		return true
+	}
+	u, err := url.Parse(origin)
+	if err != nil || u.Hostname() == "" {
+		return false
+	}
+
+	if allowed := infra.GetEnvConfig().WSAllowedOrigins; len(allowed) > 0 {
+		for _, a := range allowed {
+			if strings.EqualFold(origin, strings.TrimSpace(a)) {
+				return true
+			}
+		}
+		return false
+	}
+
+	reqHost := r.Host
+	if h, _, splitErr := net.SplitHostPort(reqHost); splitErr == nil {
+		reqHost = h
+	}
+	return strings.EqualFold(u.Hostname(), reqHost)
 }
 
 // Client - 連線物件
@@ -103,9 +134,9 @@ func NewClient(conn *websocket.Conn) *Client {
 func (c *Client) WritePump() {
 	//ticker 搭配內建SetPongHandler維持連線生命
 	ticker := time.NewTicker(pingInterval)
+	// 只關連線喚醒讀迴圈, 註銷/清 session 統一由 HandleWs 的 defer 負責, 避免重複清理。
 	defer func() {
 		ticker.Stop()
-		Unregister(c.ConnID) //
 		c.Conn.Close()
 	}()
 
