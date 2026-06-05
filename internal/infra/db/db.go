@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
@@ -11,19 +12,19 @@ import (
 	"gochat/internal/infra"
 )
 
-var dbConn *DB
-
 type DB struct {
 	DB      *sqlx.DB
 	Builder sq.StatementBuilderType
 	ctx     context.Context
 }
 
-func GetDBConn() (*DB, error) {
-	if dbConn != nil {
-		return dbConn, nil
-	}
+var dbOnce = sync.OnceValues(buildDBConn)
 
+func GetDBConn() (*DB, error) {
+	return dbOnce()
+}
+
+func buildDBConn() (*DB, error) {
 	cfg := infra.GetEnvConfig()
 
 	dsn := fmt.Sprintf(
@@ -57,13 +58,11 @@ func GetDBConn() (*DB, error) {
 		sqlDB.SetConnMaxIdleTime(5 * time.Minute)
 	}
 
-	dbConn = &DB{
+	return &DB{
 		DB:      sqlDB,
 		Builder: sq.StatementBuilder.PlaceholderFormat(sq.Dollar),
 		ctx:     context.Background(),
-	}
-
-	return dbConn, nil
+	}, nil
 }
 
 func (d *DB) Ping() error {

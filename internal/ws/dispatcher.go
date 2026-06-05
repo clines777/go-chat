@@ -11,6 +11,7 @@ import (
 type Ctx struct {
 	Client  *Client
 	Payload *protocol.Payload
+	Session *session.Session
 }
 
 type HandlerFunc func(ctx *Ctx) *protocol.Payload
@@ -60,10 +61,12 @@ func (d *Dispatcher) Dispatch(client *Client, in []byte) ([]byte, error) {
 	ctx := &Ctx{Client: client, Payload: p}
 
 	if !h.SessionFree {
-		if session.Get(client.UserId, client.ConnID) == nil {
+		sess := session.Get(client.UserId, client.ConnID)
+		if sess == nil {
 			writeError(client, "session required")
 			return nil, &protocol.DispatchError{Code: protocol.ErrSessionRequired, Message: "session required"}
 		}
+		ctx.Session = sess
 	}
 
 	out := h.Handler(ctx)

@@ -1,9 +1,8 @@
 package api
 
 import (
-	"crypto/md5"
+	"crypto/rand"
 	"encoding/hex"
-	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -13,8 +12,6 @@ import (
 	"gochat/internal/infra/redis"
 	"gochat/internal/protocol"
 )
-
-const salt = "CsXGM2ArECWqoLT0BKst"
 
 // GetLoginToken 取得登入token, 此token會暫放redis, 並用於websocket登入, 防止刷號跟刷連線.(先省掉密碼了, )
 func GetLoginToken(c *gin.Context) {
@@ -29,7 +26,12 @@ func GetLoginToken(c *gin.Context) {
 		return
 	}
 
-	token := genLoginToken(&req)
+	token, err := genLoginToken()
+	if err != nil {
+		log.Printf("[GetLoginToken] genLoginToken user=%s error: %v", req.Username, err)
+		c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorUnknown, "系統錯誤", nil).H())
+		return
+	}
 	if err := redis.GetRedis().SetJSON(protocol.LoginTokenKey(token), req, 10*time.Second); err != nil {
 		log.Printf("[GetLoginToken] SetJSON user=%s error: %v", req.Username, err)
 		c.JSON(http.StatusOK, protocol.NewApiResponse(protocol.ErrorUnknown, "系統錯誤", nil).H())
@@ -41,8 +43,11 @@ func GetLoginToken(c *gin.Context) {
 	}).H())
 }
 
-func genLoginToken(req *protocol.GetTokenReq) string {
-	info := fmt.Sprintf("%v%v%v", req.Username, time.Now(), salt)
-	hash := md5.Sum([]byte(info))
-	return strings.ToUpper(hex.EncodeToString(hash[:]))
+// genLoginToken 由於後面版本部分參數拿掉, 直接改用random
+func genLoginToken() (string, error) {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return strings.ToUpper(hex.EncodeToString(b)), nil
 }

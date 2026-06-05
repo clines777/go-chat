@@ -30,7 +30,11 @@ func Resume(ctx *ws.Ctx) *protocol.Payload {
 		return protocol.NewErrPayload(protocol.ErrUnauthorized, "invalid or expired resume token", ctx.Payload)
 	}
 
-	exists := user.Exists(tokenPayload.UserID)
+	exists, err := user.Exists(tokenPayload.UserID)
+	if err != nil {
+		log.Printf("[Resume] user.Exists user=%d error: %v", tokenPayload.UserID, err)
+		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
+	}
 	if !exists {
 		log.Printf("[Resume] user not exists")
 		return protocol.NewErrPayload(protocol.ErrUserNotFound, "user not exists", ctx.Payload)

@@ -20,7 +20,7 @@ func EnterLobby(ctx *ws.Ctx) *protocol.Payload {
 		}
 	}
 
-	sess := session.Get(ctx.Client.UserId, ctx.Client.ConnID)
+	sess := ctx.Session
 
 	groups, err := group.GetLobbyGroups(req.Page)
 	if err != nil {

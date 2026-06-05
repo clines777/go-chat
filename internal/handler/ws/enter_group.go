@@ -24,7 +24,7 @@ func EnterGroup(ctx *ws.Ctx) *protocol.Payload {
 		return protocol.NewErrPayload(protocol.ErrInvalidParam, "invalid request", ctx.Payload)
 	}
 
-	sess := session.Get(ctx.Client.UserId, ctx.Client.ConnID)
+	sess := ctx.Session
 
 	gu, err := group.GetMembership(sess.UserID, req.GroupID)
 	if err != nil {

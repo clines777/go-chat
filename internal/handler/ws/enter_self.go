@@ -7,14 +7,13 @@ import (
 	"log"
 
 	"gochat/internal/protocol"
-	"gochat/internal/session"
 	"gochat/internal/user"
 	"gochat/internal/ws"
 )
 
 // EnterSelf - 用戶進入我的資訊場景.
 func EnterSelf(ctx *ws.Ctx) *protocol.Payload {
-	sess := session.Get(ctx.Client.UserId, ctx.Client.ConnID)
+	sess := ctx.Session
 
 	u, err := user.FindByID(sess.UserID)
 	if err != nil {

@@ -21,7 +21,7 @@ func JoinGroup(ctx *ws.Ctx) *protocol.Payload {
 		return protocol.NewErrPayload(protocol.ErrInvalidParam, "invalid request", ctx.Payload)
 	}
 
-	sess := session.Get(ctx.Client.UserId, ctx.Client.ConnID)
+	sess := ctx.Session
 
 	u, err := user.FindByID(sess.UserID)
 	if err != nil {

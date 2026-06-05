@@ -6,14 +6,13 @@ import (
 	"gochat/internal/chat"
 	"gochat/internal/group"
 	"gochat/internal/protocol"
-	"gochat/internal/session"
 	"gochat/internal/ws"
 	"log"
 )
 
 // checkGroupOwner 確認當前連線使用者正處於該群場景且為群主, 通過回傳 nil, 否則回傳對應錯誤 Payload。
 func checkGroupOwner(ctx *ws.Ctx, groupID int, tag string) *protocol.Payload {
-	sess := session.Get(ctx.Client.UserId, ctx.Client.ConnID)
+	sess := ctx.Session
 	if sess.Scene != protocol.SceneInGroup || sess.InGroupID != groupID {
 		return protocol.NewErrPayload(protocol.ErrInvalidParam, "not in group", ctx.Payload)
 	}

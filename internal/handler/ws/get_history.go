@@ -9,7 +9,6 @@ import (
 	"gochat/internal/chat"
 	"gochat/internal/group"
 	"gochat/internal/protocol"
-	"gochat/internal/session"
 	"gochat/internal/ws"
 )
 
@@ -22,7 +21,7 @@ func GetHistory(ctx *ws.Ctx) *protocol.Payload {
 		return protocol.NewErrPayload(protocol.ErrInvalidParam, "invalid request", ctx.Payload)
 	}
 
-	sess := session.Get(ctx.Client.UserId, ctx.Client.ConnID)
+	sess := ctx.Session
 
 	if _, err := group.GetMembership(sess.UserID, req.GroupID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

@@ -10,7 +10,6 @@ import (
 	"gochat/internal/chat"
 	"gochat/internal/group"
 	"gochat/internal/protocol"
-	"gochat/internal/session"
 	"gochat/internal/user"
 	"gochat/internal/ws"
 )
@@ -23,7 +22,7 @@ func SendChat(ctx *ws.Ctx) *protocol.Payload {
 		return protocol.NewErrPayload(protocol.ErrInvalidParam, "invalid request", ctx.Payload)
 	}
 
-	sess := session.Get(ctx.Client.UserId, ctx.Client.ConnID)
+	sess := ctx.Session
 	if sess.Scene != protocol.SceneInGroup || sess.InGroupID != req.GroupId {
 		return protocol.NewErrPayload(protocol.ErrInvalidParam, "not in group", ctx.Payload)
 	}

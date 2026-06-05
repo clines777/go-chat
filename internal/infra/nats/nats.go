@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	gonats "github.com/nats-io/nats.go"
@@ -21,7 +22,6 @@ const SubjectGroupBan = "group.ban"
 const SubjectGroupUnban = "group.unban"
 const SubjectGroupKick = "group.kick"
 
-var conn *Client
 var consumers []func() error
 
 func RegisterConsumer(fn func() error) {
@@ -33,10 +33,13 @@ type Client struct {
 	JS gonats.JetStreamContext
 }
 
+var natsOnce = sync.OnceValues(connectNats)
+
 func GetNats() (*Client, error) {
-	if conn != nil {
-		return conn, nil
-	}
+	return natsOnce()
+}
+
+func connectNats() (*Client, error) {
 	cfg := infra.GetEnvConfig()
 	nc, err := gonats.Connect(cfg.NatsURL)
 	if err != nil {
@@ -47,8 +50,7 @@ func GetNats() (*Client, error) {
 		nc.Close()
 		return nil, fmt.Errorf("nats jetstream: %w", err)
 	}
-	conn = &Client{nc: nc, JS: js}
-	return conn, nil
+	return &Client{nc: nc, JS: js}, nil
 }
 
 func (c *Client) Ping() error {

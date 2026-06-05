@@ -3,57 +3,40 @@ package redis
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"sync"
+	"time"
+
 	goredis "github.com/redis/go-redis/v9"
 	"gochat/internal/infra"
-	"time"
 )
 
-var redisConn *Client
+var (
+	redisConn *Client
+	redisOnce sync.Once
+)
 
 type Client struct {
 	Conn *goredis.Client
-	ctx  context.Context
 }
 
 func GetRedis() *Client {
-	if redisConn == nil {
+	redisOnce.Do(func() {
 		cfg := infra.GetEnvConfig()
-		redisConn = &Client{}
-		redisConn.Conn = goredis.NewClient(&goredis.Options{
-			Addr:         cfg.RedisHost,
-			Password:     cfg.RedisPassword,
-			DB:           cfg.RedisDB,
-			DialTimeout:  cfg.RedisDialTimeout,
-			ReadTimeout:  cfg.RedisDialTimeout,
-			WriteTimeout: cfg.RedisDialTimeout,
-			PoolSize:     20,
-			MinIdleConns: 2,
-		})
-	}
-
-	redisConn.ctx = context.Background()
-
-	return redisConn
-}
-
-func GetRedisWithContext(ctx context.Context) *Client {
-	if redisConn == nil {
-		cfg := infra.GetEnvConfig()
-		redisConn = &Client{}
-		redisConn.Conn = goredis.NewClient(&goredis.Options{
-			Addr:         cfg.RedisHost,
-			Password:     cfg.RedisPassword,
-			DB:           cfg.RedisDB,
-			DialTimeout:  cfg.RedisDialTimeout,
-			ReadTimeout:  cfg.RedisDialTimeout,
-			WriteTimeout: cfg.RedisDialTimeout,
-			PoolSize:     20,
-			MinIdleConns: 2,
-		})
-	}
-	redisConn.ctx = ctx
-
+		redisConn = &Client{
+			Conn: goredis.NewClient(&goredis.Options{
+				Addr:         cfg.RedisHost,
+				Password:     cfg.RedisPassword,
+				DB:           cfg.RedisDB,
+				DialTimeout:  cfg.RedisDialTimeout,
+				ReadTimeout:  cfg.RedisDialTimeout,
+				WriteTimeout: cfg.RedisDialTimeout,
+				PoolSize:     20,
+				MinIdleConns: 2,
+			}),
+		}
+	})
 	return redisConn
 }
 
@@ -62,12 +45,12 @@ func (c *Client) Ping() error {
 	if c == nil || c.Conn == nil {
 		return fmt.Errorf("redis ws is nil")
 	}
-	return c.Conn.Ping(c.ctx).Err()
+	return c.Conn.Ping(context.Background()).Err()
 }
 
 func (c *Client) GetString(key string) (string, bool, error) {
-	val, err := c.Conn.Get(c.ctx, key).Result()
-	if err == goredis.Nil {
+	val, err := c.Conn.Get(context.Background(), key).Result()
+	if errors.Is(err, goredis.Nil) {
 		return "", false, nil
 	}
 	if err != nil {
@@ -77,15 +60,15 @@ func (c *Client) GetString(key string) (string, bool, error) {
 }
 
 func (c *Client) SetString(key string, value string, exp time.Duration) error {
-	return c.Conn.Set(c.ctx, key, value, exp).Err()
+	return c.Conn.Set(context.Background(), key, value, exp).Err()
 }
 
 func (c *Client) Del(keys ...string) error {
-	return c.Conn.Del(c.ctx, keys...).Err()
+	return c.Conn.Del(context.Background(), keys...).Err()
 }
 
 func (c *Client) Exists(key string) (bool, error) {
-	n, err := c.Conn.Exists(c.ctx, key).Result()
+	n, err := c.Conn.Exists(context.Background(), key).Result()
 	if err != nil {
 		return false, err
 	}
@@ -93,7 +76,7 @@ func (c *Client) Exists(key string) (bool, error) {
 }
 
 func (c *Client) Expire(key string, exp time.Duration) error {
-	return c.Conn.Expire(c.ctx, key, exp).Err()
+	return c.Conn.Expire(context.Background(), key, exp).Err()
 }
 
 func (c *Client) SetJSON(key string, value any, exp time.Duration) error {
@@ -101,12 +84,12 @@ func (c *Client) SetJSON(key string, value any, exp time.Duration) error {
 	if err != nil {
 		return err
 	}
-	return c.Conn.Set(c.ctx, key, b, exp).Err()
+	return c.Conn.Set(context.Background(), key, b, exp).Err()
 }
 
 func (c *Client) GetJSON(key string, dest any) (bool, error) {
-	val, err := c.Conn.Get(c.ctx, key).Bytes()
-	if err == goredis.Nil {
+	val, err := c.Conn.Get(context.Background(), key).Bytes()
+	if errors.Is(err, goredis.Nil) {
 		return false, nil
 	}
 	if err != nil {

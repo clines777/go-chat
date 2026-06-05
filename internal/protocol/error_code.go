@@ -1,6 +1,6 @@
 package protocol
 
-var (
+const (
 	ErrorNone                 = 0
 	ErrorUnknown              = 1
 	ErrorNotFound             = 2
