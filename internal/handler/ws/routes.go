@@ -8,6 +8,7 @@ import (
 func init() {
 	ws.Default.Register(protocol.Login, &ws.Route{SessionFree: true, Handler: Login})
 	ws.Default.Register(protocol.EnterGroup, &ws.Route{Handler: EnterGroup})
+	ws.Default.Register(protocol.GetHistory, &ws.Route{Handler: GetHistory})
 	ws.Default.Register(protocol.EnterLobby, &ws.Route{Handler: EnterLobby})
 	ws.Default.Register(protocol.EnterMyGroup, &ws.Route{Handler: EnterMyGroup})
 	ws.Default.Register(protocol.EnterSelf, &ws.Route{Handler: EnterSelf})

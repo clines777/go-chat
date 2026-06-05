@@ -69,7 +69,7 @@ CREATE TABLE chat_record (
 );
 
 CREATE INDEX idx_chat_record_type_user_group ON chat_record (type, user_id, group_id);
--- 取群組最新發言用 (符合 GetRecentChats 的 WHERE deleted=false ORDER BY id DESC)。
+-- 取群組最新發言 / 向上分頁歷史訊息用 (GetRecentChats / GetHistoryChats: WHERE deleted=false ORDER BY id DESC, id < cursor)。
 CREATE INDEX idx_chat_record_group_recent ON chat_record (group_id ASC, id DESC) WHERE deleted = false;
 
 CREATE TABLE group_user (

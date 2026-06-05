@@ -111,13 +111,27 @@ func FindInGroup(chatID, groupID int) (*protocol.ChatInfo, error) {
 	return &row, nil
 }
 
-// GetRecentChats 取得指定群組最新 limit 筆聊天訊息
-func GetRecentChats(groupID int, limit int) ([]protocol.ChatInfo, error) {
+// GetRecentChats 取得指定群組最新 limit 筆聊天訊息 (進群初次載入)。
+// hasMore 表示這批之前是否還有更舊訊息可供向上分頁載入。
+func GetRecentChats(groupID int, limit int) ([]protocol.ChatInfo, bool, error) {
+	return GetHistoryChats(groupID, 0, limit)
+}
+
+// GetHistoryChats 取得 beforeID 之前 (更舊) 的最多 limit 筆訊息, 依 id 正序回傳。
+// beforeID = 0 表示從最新一筆往前取; 走 (group_id, id DESC) WHERE deleted=false 的 partial index。
+// hasMore 表示在這批之前是否還有更舊訊息。
+func GetHistoryChats(groupID, beforeID, limit int) ([]protocol.ChatInfo, bool, error) {
 	d, err := db.GetDBConn()
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
+	cond := sq.And{sq.Eq{"cr.group_id": groupID, "cr.deleted": false}}
+	if beforeID > 0 {
+		cond = append(cond, sq.Lt{"cr.id": beforeID})
+	}
+
+	// 多取一筆以判斷是否還有更舊訊息。
 	sub := d.Builder.
 		Select(
 			"cr.id", "cr.user_id", "u.username AS username",
@@ -127,19 +141,30 @@ func GetRecentChats(groupID int, limit int) ([]protocol.ChatInfo, error) {
 		From("chat_record cr").
 		Join(`"user" u ON u.id = cr.user_id`).
 		LeftJoin("avatar av ON av.id = u.avatar_id").
-		Where(sq.Eq{"cr.group_id": groupID, "cr.deleted": false}).
-		OrderBy("cr.create_time DESC").
-		Limit(uint64(limit))
+		Where(cond).
+		OrderBy("cr.id DESC").
+		Limit(uint64(limit + 1))
 
 	querySql, args, _ := d.Builder.
 		Select("*").
 		FromSelect(sub, "t").
-		OrderBy("create_time ASC").
+		OrderBy("id ASC").
 		ToSql()
 
 	var rows []protocol.ChatInfo
 	if err := d.DB.Select(&rows, querySql, args...); err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return rows, nil
+
+	chats, hasMore := trimHistoryPage(rows, limit)
+	return chats, hasMore, nil
+}
+
+// trimHistoryPage 處理「多取一筆」結果。rows 為 id 正序且最多 limit+1 筆:
+// 若超過 limit 代表這批之前還有更舊訊息, 砍掉最舊 (開頭) 那筆並回報 hasMore=true。
+func trimHistoryPage(rows []protocol.ChatInfo, limit int) ([]protocol.ChatInfo, bool) {
+	if len(rows) > limit {
+		return rows[len(rows)-limit:], true
+	}
+	return rows, false
 }

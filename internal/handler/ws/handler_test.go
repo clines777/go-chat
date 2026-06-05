@@ -91,6 +91,12 @@ func TestHandlers_RejectInvalidInput(t *testing.T) {
 		{"EnterGroup/missingBody", EnterGroup, protocol.EnterGroup, ""},
 		{"EnterGroup/empty", EnterGroup, protocol.EnterGroup, `{}`},
 
+		// ── GetHistory (需要 group_id; before_id 選填) ──
+		{"GetHistory/missingBody", GetHistory, protocol.GetHistory, ""},
+		{"GetHistory/empty", GetHistory, protocol.GetHistory, `{}`},
+		{"GetHistory/malformed", GetHistory, protocol.GetHistory, `{"group_id":}`},
+		{"GetHistory/zeroGroup", GetHistory, protocol.GetHistory, `{"group_id":0,"before_id":100}`},
+
 		// ── JoinGroup (需要 group_id > 0) ──
 		{"JoinGroup/missingBody", JoinGroup, protocol.JoinGroup, ""},
 		{"JoinGroup/zero", JoinGroup, protocol.JoinGroup, `{"group_id":0}`},

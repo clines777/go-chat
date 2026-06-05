@@ -431,6 +431,14 @@
     }
     .msg-empty .e-icon { font-size: 36px; margin-bottom: 8px; }
 
+    .msg-history-hint {
+      text-align: center;
+      padding: 8px 0 12px;
+      color: var(--muted);
+      font-size: 12px;
+      user-select: none;
+    }
+
     .message {
       display: flex;
       gap: 12px;
@@ -896,10 +904,15 @@
           <button v-if="isGroupOwner" class="pin-unbtn" @click="unpinChat" title="取消置頂">✕</button>
         </div>
 
-        <div class="messages" ref="msgsRef">
+        <div class="messages" ref="msgsRef" @scroll.passive="onMessagesScroll">
           <div v-if="!currentGroup.chats.length" class="msg-empty">
             <div class="e-icon">🌱</div>
             還沒有任何訊息<br/>來發第一則吧！
+          </div>
+          <div v-if="currentGroup.chats.length" class="msg-history-hint">
+            <span v-if="loadingHistory">載入歷史訊息中…</span>
+            <span v-else-if="currentGroup.hasMore">↑ 上滑載入更早的訊息</span>
+            <span v-else>沒有更早的訊息了</span>
           </div>
           <div
             v-for="m in currentGroup.chats" :key="m.id"
@@ -1164,7 +1177,8 @@ createApp({
 
     const myGroupIds = computed(() => new Set(myGroups.value.map(g => g.id)));
 
-    const currentGroup = reactive({ id: 0, title: '', memberCount: 0, chats: [], pinChatId: 0, pinChat: null });
+    const currentGroup = reactive({ id: 0, title: '', memberCount: 0, chats: [], pinChatId: 0, pinChat: null, hasMore: false });
+    const loadingHistory = ref(false); // 向上分頁載入中, 避免重複觸發
 
     // ── Moderation state ──
     const selfBanned    = ref(false);          // 當前使用者是否在此群被禁言
@@ -1200,6 +1214,21 @@ createApp({
       nextTick(() => {
         if (msgsRef.value) msgsRef.value.scrollTop = msgsRef.value.scrollHeight;
       });
+    }
+
+    // 卷到頂端附近且還有更舊訊息時, 觸發向上分頁載入。
+    function onMessagesScroll() {
+      const el = msgsRef.value;
+      if (!el || loadingHistory.value || !currentGroup.hasMore) return;
+      if (el.scrollTop <= 60) loadMoreHistory();
+    }
+
+    function loadMoreHistory() {
+      if (loadingHistory.value || !currentGroup.hasMore) return;
+      const oldest = currentGroup.chats[0];
+      if (!oldest || !oldest.id) return;
+      loadingHistory.value = true;
+      wsSend('get_history', { group_id: currentGroup.id, before_id: oldest.id });
     }
 
     function wsSend(msgType, data) {
@@ -1282,6 +1311,8 @@ createApp({
           currentGroup.title       = data.title;
           currentGroup.memberCount = data.group_user_count;
           currentGroup.chats       = (data.chats || []).map(normalizeHistory);
+          currentGroup.hasMore     = !!data.has_more;
+          loadingHistory.value     = false;
           currentGroup.pinChatId   = data.pin_chat ? data.pin_chat.id : 0;
           currentGroup.pinChat     = data.pin_chat ? normalizeHistory(data.pin_chat) : null;
           currentGroupId.value     = data.group_id;
@@ -1293,6 +1324,24 @@ createApp({
             if (lastId) wsSend('update_last_read', { group_id: data.group_id, chat_id: lastId });
           }
           break;
+
+        case 'get_history_ok': {
+          loadingHistory.value = false;
+          if (!data || data.group_id !== currentGroup.id) break;
+          currentGroup.hasMore = !!data.has_more;
+          const older = (data.chats || []).map(normalizeHistory);
+          if (older.length) {
+            const el = msgsRef.value;
+            const prevHeight = el ? el.scrollHeight : 0;
+            const prevTop    = el ? el.scrollTop : 0;
+            currentGroup.chats.unshift(...older);
+            // prepend 後維持原本閱讀位置: 補回新增內容撐高的差值, 避免畫面跳動。
+            nextTick(() => {
+              if (el) el.scrollTop = prevTop + (el.scrollHeight - prevHeight);
+            });
+          }
+          break;
+        }
 
         case 'cast_chat':
           if (data && data.group_id === currentGroup.id) {
@@ -1307,6 +1356,8 @@ createApp({
           currentGroup.title       = data.title;
           currentGroup.memberCount = data.group_user_count;
           currentGroup.chats       = (data.chats || []).map(normalizeHistory);
+          currentGroup.hasMore     = !!data.has_more;
+          loadingHistory.value     = false;
           currentGroup.pinChatId   = data.pin_chat_id || 0;
           currentGroup.pinChat     = data.pin_chat ? normalizeHistory(data.pin_chat) : null;
           currentGroupId.value     = data.group_id;
@@ -1552,6 +1603,8 @@ createApp({
 
     function enterGroup(groupId) {
       currentGroup.chats = [];
+      currentGroup.hasMore = false;
+      loadingHistory.value = false;
       currentGroup.pinChatId = 0;
       currentGroup.pinChat = null;
       selfBanned.value    = false;
@@ -1850,7 +1903,7 @@ createApp({
       view, connecting, loginError, loginForm, toast,
       user, tab, currentGroupId, showProfile, avatarList,
       lobbyGroups, myGroups, myGroupIds, currentGroup,
-      chatInput, msgsRef,
+      chatInput, msgsRef, loadingHistory, onMessagesScroll,
       showCreateGroup, createGroupForm,
       groupInfo, isGroupOwner,
       coverUploading, coverFileInputRef,

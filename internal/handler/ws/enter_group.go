@@ -59,7 +59,7 @@ func EnterGroup(ctx *ws.Ctx) *protocol.Payload {
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
 	}
 
-	chats, err := chat.GetRecentChats(req.GroupID, RecentChatCount)
+	chats, hasMore, err := chat.GetRecentChats(req.GroupID, RecentChatCount)
 	if err != nil {
 		log.Printf("[EnterGroup] GetRecentChats group=%d error: %v", req.GroupID, err)
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
@@ -73,6 +73,7 @@ func EnterGroup(ctx *ws.Ctx) *protocol.Payload {
 		SelfBanned:     gu.IsBan,
 		Chats:          chats,
 		PinChat:        pinChat,
+		HasMore:        hasMore,
 	}
 
 	respData, err := json.Marshal(resp)

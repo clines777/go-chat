@@ -73,7 +73,7 @@ func JoinGroup(ctx *ws.Ctx) *protocol.Payload {
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
 	}
 
-	chats, err := chat.GetRecentChats(req.GroupID, RecentChatCount)
+	chats, hasMore, err := chat.GetRecentChats(req.GroupID, RecentChatCount)
 	if err != nil {
 		log.Printf("[JoinGroup] GetRecentChats group=%d error: %v", req.GroupID, err)
 		return protocol.NewErrPayload(protocol.ErrInternalError, "internal error", ctx.Payload)
@@ -87,6 +87,7 @@ func JoinGroup(ctx *ws.Ctx) *protocol.Payload {
 		PinChat:        pinChat,
 		SelfBanned:     false,
 		Chats:          chats,
+		HasMore:        hasMore,
 	})
 	if err != nil {
 		log.Printf("[JoinGroup] marshal error: %v", err)
