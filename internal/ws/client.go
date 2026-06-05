@@ -47,6 +47,13 @@ func HandleWs(w http.ResponseWriter, r *http.Request) {
 	client := NewClient(conn)
 	go client.WritePump()
 
+	// 讀迴圈離開時統一清理: 註銷連線/清 session → 關閉 Send 通知 WritePump 收尾 → 關連線。
+	defer func() {
+		Unregister(client.ConnID)
+		close(client.Send)
+		client.Conn.Close()
+	}()
+
 	conn.SetPongHandler(func(string) error {
 		_ = conn.SetReadDeadline(time.Now().Add(PongWait))
 		return nil
@@ -56,13 +63,9 @@ func HandleWs(w http.ResponseWriter, r *http.Request) {
 		mt, input, err := conn.ReadMessage()
 		if err != nil {
 			log.Printf("[WS] read error: %v", err)
-			close(client.Send)
 			return
 		}
 		if mt != websocket.TextMessage {
-			Unregister(client.ConnID)
-			close(client.Send)
-			client.Conn.Close()
 			return
 		}
 
@@ -70,9 +73,6 @@ func HandleWs(w http.ResponseWriter, r *http.Request) {
 		if dispatchErr != nil {
 			var de *protocol.DispatchError
 			if errors.As(dispatchErr, &de) && de.Fatal {
-				Unregister(client.ConnID)
-				client.Conn.Close()
-				close(client.Send)
 				return
 			}
 			continue
@@ -82,8 +82,7 @@ func HandleWs(w http.ResponseWriter, r *http.Request) {
 			select {
 			case client.Send <- output:
 			default:
-				Unregister(client.ConnID)
-				close(client.Send)
+				// Send chan滿, 視為slow client, 連線由defer統一清理。
 				return
 			}
 		}
