@@ -119,6 +119,20 @@ type EnterGroupResp struct {
 	PinChat        *ChatInfo  `json:"pin_chat,omitempty"`
 	SelfBanned     bool       `json:"self_banned"`
 	Chats          []ChatInfo `json:"chats"`
+	HasMore        bool       `json:"has_more"` // 初次載入這批之前是否還有更舊訊息
+}
+
+// GetHistoryReq 向上分頁載入歷史訊息。BeforeID 為目前最舊一筆訊息 id (游標),
+// 服務端回傳 id < BeforeID 的更舊訊息; BeforeID = 0 等同進群初次載入。
+type GetHistoryReq struct {
+	GroupID  int `json:"group_id" validate:"required"`
+	BeforeID int `json:"before_id"`
+}
+
+type GetHistoryResp struct {
+	GroupId int        `json:"group_id"`
+	Chats   []ChatInfo `json:"chats"`   // id 正序; 前端 prepend 到列表頂端
+	HasMore bool       `json:"has_more"` // 是否還有更舊訊息可繼續載入
 }
 
 type UserSelfResp struct {

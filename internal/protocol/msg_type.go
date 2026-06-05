@@ -7,6 +7,8 @@ const (
 	LoginOK          MsgType = "login_ok"
 	EnterGroup       MsgType = "enter_group"
 	EnterGroupOk     MsgType = "enter_group_ok"
+	GetHistory       MsgType = "get_history"
+	GetHistoryOk     MsgType = "get_history_ok"
 	LeaveGroup       MsgType = "leave_group"
 	LeaveGroupOk     MsgType = "leave_group_ok"
 	LeaveGroupCast   MsgType = "leave_group_cast"
