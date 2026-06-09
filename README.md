@@ -50,7 +50,7 @@ psql "$DB_URL" -f db/schema.sql
 ## 啟動
 
 ```bash
-go run ./cmd/chatd/main.go
+docker compose up -d / docker compose down
 ```
 
 ## 前端頁面: 
