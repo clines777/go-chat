@@ -39,7 +39,7 @@
 | `NATS_URL` | NATS 連線位址           |
 | `SERVER_NAME` | 此節點名稱 (多台server識別用) |
 
-## 初始化 DB
+## 初始化 DB(自建)
 
 首次啟動前先建表 (schema 見 `db/schema.sql`):
 
