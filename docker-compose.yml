@@ -1,0 +1,103 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gochat-app
+    ports:
+      - "9501:9501"                 # HTTP REST API
+      - "9502:9502"                 # WebSocket
+    environment:
+      # DB：走 compose 內部網路，指向 postgres service
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: cp_chat
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_SSLMODE: disable
+      DB_TIMEZONE: Asia/Taipei
+      # Redis / NATS：走 compose 內部網路，用 service name
+      REDIS_HOST: redis:6379
+      REDIS_DB: "0"
+      REDIS_PASSWORD: ""
+      NATS_URL: nats://nats:4222
+      GIN_MODE: release
+      WS_ALLOWED_ORIGINS: ""
+    volumes:
+      # 上傳產物持久化 (named volume 首次建立會從 image 內容 seed)
+      - app-uploads-covers:/app/static/group-covers
+      - app-uploads-avatars:/app/static/avatars
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: gochat-postgres
+    environment:
+      POSTGRES_DB: cp_chat
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      TZ: Asia/Taipei
+    ports:
+      - "5432:5432"                 # 對外也開，方便本機工具連線
+    volumes:
+      # 資料持久化：named volume，重啟/重建/down 都不會消失
+      - postgres-data:/var/lib/postgresql/data
+      # 首次啟動 (資料目錄為空) 自動執行 schema 初始化
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cp_chat"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  nats:
+    image: nats:2.10-alpine
+    container_name: gochat-nats
+    command:
+      - "-js"                       # 啟用 JetStream
+      - "-sd"                       # JetStream store dir
+      - "/data"
+      - "-m"                        # 監控/健康檢查 port
+      - "8222"
+    ports:
+      - "4222:4222"                 # client
+      - "8222:8222"                 # http monitoring
+    volumes:
+      - nats-data:/data
+    healthcheck:
+      # NATS 自帶的健康檢查端點 (monitoring port)
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8222/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: gochat-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6380:6379"                 # 對應 .env 的 REDIS_HOST=127.0.0.1:6380
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  nats-data:
+  redis-data:
+  app-uploads-covers:
+  app-uploads-avatars:

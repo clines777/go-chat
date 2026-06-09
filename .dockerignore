@@ -1,0 +1,11 @@
+.git
+.idea
+.claude
+bin
+.env
+*.md
+docker-compose.yml
+Dockerfile
+.dockerignore
+# 上傳產物，不要烘進 image (執行期用 volume 持久化)
+static/group-covers/*
