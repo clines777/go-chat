@@ -5,10 +5,26 @@
 
 ## 環境需求
 
- - DB: PostgreSQL >= 8.2
+ - DB: Postgres >= 8.2
  - Redis >= 7.2
- - nats >= 2.14 (啟用jet-stream)
+ - nats >= 2.14 (啟用JetStream)
  - Go >= 1.25
+
+## 技術選型因素
+
+- Postgres
+1. 查詢優化器可預測，不容易出現rule-based跟cost-based錯用的情況。
+2. 已有可靠的extension - Citus，可用於日後DB數據量過大時方便做sharding。
+3. 豐富的extension庫。
+- Redis
+1. 聲帶成熟穩定泛用的no sql。
+2. 豐富的數據結構方便存儲用戶狀態。
+3. TTL方便用於短生命週期的數據keep alive，例如用戶session跟api token。
+- Nats(JetStream)
+1. 作為拉式MQ，方便控流量。
+2. 規模較小，安裝部屬方便。
+3. subject(類似Kafka的Topic)匹配的wild card方便做數據分割。
+4. 自帶JetStream streaming layer模組，相較於傳統的pub/sub，(1)應用性較廣 (2)debug時方便觀察管道內狀況。(3)資料持久化
 
 ## 設定
 
