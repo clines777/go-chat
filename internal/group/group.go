@@ -87,7 +87,7 @@ func createGroupTx(d *db.DB, req *protocol.CreateGroupReq, owner *model.User, co
 		Insert("chat_group").
 		Columns("title", "code", "open_join", "user_limit", "bulletin",
 			"owner_user_id", "owner_username").
-		Values(req.Title, code, req.OpenJoin, req.UserLimit, req.Bulletin,
+		Values(req.Title, code, true, req.UserLimit, req.Bulletin,
 			owner.ID, owner.Username).
 		Suffix("RETURNING id").
 		RunWith(tx).
