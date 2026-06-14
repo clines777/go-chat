@@ -255,7 +255,6 @@ type CreateGroupReq struct {
 	Code      string `json:"code"`
 	UserLimit int    `json:"user_limit"`
 	Bulletin  string `json:"bulletin"`
-	OpenJoin  bool   `json:"open_join"`
 }
 
 type SetAvatarReq struct {
