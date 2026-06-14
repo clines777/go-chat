@@ -1074,13 +1074,6 @@
         <label>公告（選填）</label>
         <textarea v-model="createGroupForm.bulletin" placeholder="群組公告內容…"></textarea>
       </div>
-      <div class="cg-field">
-        <label class="cg-checkbox">
-          <input type="checkbox" v-model="createGroupForm.openJoin" />
-          開放任何人自由加入
-        </label>
-      </div>
-
       <button class="modal-submit" @click="submitCreateGroup" :disabled="!createGroupForm.title.trim()">建立群組</button>
       <button class="modal-close" @click="showCreateGroup = false">取消</button>
     </div>
@@ -1152,7 +1145,7 @@ createApp({
     });
 
     const showCreateGroup  = ref(false);
-    const createGroupForm  = reactive({ title: '', code: '', userLimit: 0, bulletin: '', openJoin: false });
+    const createGroupForm  = reactive({ title: '', code: '', userLimit: 0, bulletin: '' });
 
     const showUpdateGroup  = ref(false);
     const updateGroupForm  = reactive({ title: '', bulletin: '', remark: '' });
@@ -1714,7 +1707,6 @@ createApp({
       createGroupForm.code      = '';
       createGroupForm.userLimit = 0;
       createGroupForm.bulletin  = '';
-      createGroupForm.openJoin  = false;
       showCreateGroup.value     = true;
     }
 
@@ -1732,7 +1724,6 @@ createApp({
             code:       createGroupForm.code.trim() || undefined,
             user_limit: createGroupForm.userLimit || 0,
             bulletin:   createGroupForm.bulletin.trim(),
-            open_join:  createGroupForm.openJoin,
           }),
         });
         const json = await res.json();

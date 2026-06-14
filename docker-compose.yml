@@ -27,6 +27,8 @@ services:
       # 上傳產物持久化 (named volume 首次建立會從 image 內容 seed)
       - app-uploads-covers:/app/static/group-covers
       - app-uploads-avatars:/app/static/avatars
+      # bind mount：host 上的 web/ 直接掛進容器，改檔即時反映（refresh 即可）
+      - ./web:/app/web
     depends_on:
       postgres:
         condition: service_healthy
