@@ -1,7 +1,7 @@
 # gochat
 
-基於 WebSocket 的即時群聊服務。參考個人之前開發的一套基於PHP(Hyperf框架)、Redis、Mysql，以包網平台用戶為目標的群聊系統為基礎，採用Go、Nats、Redis與Postgresql開發而成，因應demo需求，對部分機制加以簡化，並將架構調整為可直接在本機運行的單體式架構。
-此專案開發主要作為面試作品用，同時也是個人為練習之前沒嘗試過的AI coding的開發方式而做，後端部分為手動編程與Claude CLI交互開發而成，claude code主要用於code review、協助進行大規模調整及提供優化建議，附帶的web前端頁面則全由AI處理。
+基於 WebSocket 的即時群聊服務。參考個人之前開發的一套基於PHP(Hyperf框架)、Redis、Mysql，以包網平台用戶為目標的群聊系統為基礎，採用Go、Nats、Redis與Postgresql開發而成，因應demo需求，省略掉原系統跟包網系統間的溝通流程，並將架構調整為可直接在本機運行的單體式架構。
+此專案開發主要作為面試作品用，同時也是個人為練習之前沒嘗試過的AI coding的開發方式而做，後端部分為手動編程與Claude CLI交互開發而成，Claude Code主要用於code review、協助進行大規模調整及提供優化建議，附帶的web前端頁面則全由AI處理。
 
 ## 系統流程
 
@@ -19,17 +19,17 @@
 ## 技術選型因素
 
 - Postgres
-1. 查詢優化器可預測，不容易出現rule-based跟cost-based錯用的情況。
-2. 已有可靠的extension - Citus，可用於日後DB數據量過大時方便做sharding。
+1. 查詢優化器可預測，不像Mysql容易出現rule-based跟cost-based錯用，造成卡頓的情況。
+2. 已有可靠的extension - Citus，可用於日後DB數據量過大時方便做DB sharding。
 3. 豐富的extension庫。
 - Redis
-1. 聲帶成熟穩定泛用的no sql。
-2. 豐富的數據結構方便存儲用戶狀態。
+1. 生態成熟穩定泛用的no sql。
+2. 豐富的數據結構。
 3. TTL方便用於短生命週期的數據keep alive，例如用戶session跟api token。
 - Nats(JetStream)
 1. 作為拉式MQ，方便控流量。
 2. 規模較小，安裝部屬方便。
-3. subject(類似Kafka的Topic)匹配的wild card方便做數據分割。
+3. subject(對比Kafka的Topic)匹配的wild card方便做數據分割。eg. 推:group_cast.{group_id}, 拉:group_cast.*
 4. 自帶JetStream streaming layer模組，相較於傳統的pub/sub，(1)應用性較廣 (2)debug時方便觀察管道內狀況。(3)資料持久化
 
 ## 設定
