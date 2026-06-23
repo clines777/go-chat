@@ -1,6 +1,6 @@
 # gochat
 
-基於 WebSocket 的即時群聊服務。參考個人之前開發的一套基於PHP(Hyperf框架)、Redis、Mysql，以包網平台用戶為目標的群聊系統為基礎，採用Go、Nats、Redis與Postgresql開發而成，因應demo需求，省略掉原系統跟包網系統間的溝通流程，並將架構調整為可直接在本機運行的單體式架構。
+基於 WebSocket 的即時群聊服務。參考個人之前開發的一套基於PHP(Hyperf框架)、Redis、Mysql，以包網平台用戶為目標的群聊系統為基礎，採用Go、Nats、Redis與Postgresql開發而成，因應demo需求，省略掉原系統跟包網系統間的溝通流程，並將架構調整為可直接在本機運行的單體式架構(正常應該將持有連線的連線層跟處理商業邏輯的服務層拆成兩個專案才方便hotfix)。
 此專案開發主要作為面試作品用，同時也是個人為練習之前沒嘗試過的AI coding的開發方式而做，後端部分為手動編程與Claude CLI交互開發而成，Claude Code主要用於code review、協助進行大規模調整及提供優化建議，附帶的web前端頁面則全由AI處理。
 
 ## 系統流程
