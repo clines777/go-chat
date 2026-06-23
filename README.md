@@ -3,6 +3,12 @@
 基於 WebSocket 的即時群聊服務。參考個人之前開發的一套基於PHP(Hyperf框架)、Redis、Mysql，以包網平台用戶為目標的群聊系統為基礎，採用Go、Nats、Redis與Postgresql開發而成，因應demo需求，對部分機制加以簡化，並將架構調整為可直接在本機運行的單體式架構。
 此專案開發主要作為面試作品用，同時也是個人為練習之前沒嘗試過的AI coding的開發方式而做，後端部分為手動編程與Claude CLI交互開發而成，claude code主要用於code review、協助進行大規模調整及提供優化建議，附帶的web前端頁面則全由AI處理。
 
+## 系統流程
+
+下圖示意送出一則聊天訊息時，client 與 server 之間的完整往返：登入換取 session、`send_chat` 經 Dispatcher 路由與 Redis session 驗證、寫入 PostgreSQL，再透過 NATS JetStream 廣播回群內其他連線。
+
+![client ↔ server 系統流程](docs/flow.webp)
+
 ## 環境需求
 
  - DB: Postgres >= 8.2
